@@ -16,26 +16,34 @@ function getSessionDate() {
 }
 
 // 当日のセッションを取得（なければ新規作成）
+// upsertで競合を防ぐ
 async function getOrCreateSession(userId) {
   const sessionDate = getSessionDate();
 
-  const { data: existing } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from('chat_sessions')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('session_date', sessionDate)
-    .single();
-
-  if (existing) return existing;
-
-  const { data: created, error } = await supabaseAdmin
-    .from('chat_sessions')
-    .insert({ user_id: userId, session_date: sessionDate, messages: [] })
+    .upsert(
+      { user_id: userId, session_date: sessionDate, messages: [] },
+      { onConflict: 'user_id,session_date', ignoreDuplicates: true }
+    )
     .select()
     .single();
 
+  // upsertがignoreDuplicatesで行を返さない場合、既存を取得
+  if (!data) {
+    const { data: existing, error: fetchError } = await supabaseAdmin
+      .from('chat_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('session_date', sessionDate)
+      .single();
+
+    if (fetchError) throw fetchError;
+    return existing;
+  }
+
   if (error) throw error;
-  return created;
+  return data;
 }
 
 module.exports = { getSessionDate, getOrCreateSession };

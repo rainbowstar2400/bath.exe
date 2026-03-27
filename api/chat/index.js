@@ -63,10 +63,14 @@ module.exports = async function handler(req, res) {
   messages.push({ role: 'assistant', content: reply });
 
   // セッションを更新
-  await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin
     .from('chat_sessions')
     .update({ messages })
     .eq('id', session.id);
+
+  if (updateError) {
+    return res.status(500).json({ error: 'セッションの保存に失敗しました' });
+  }
 
   const remaining = MAX_TURNS - (userMessageCount + 1);
 

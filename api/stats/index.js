@@ -22,12 +22,16 @@ module.exports = async function handler(req, res) {
   monday.setDate(monday.getDate() - mondayOffset);
   const weekStart = monday.toISOString().split('T')[0];
 
-  const { data: logs } = await supabaseAdmin
+  const { data: logs, error: logsError } = await supabaseAdmin
     .from('bath_logs')
     .select('*')
     .eq('user_id', user.id)
     .gte('done_at', `${weekStart}T03:00:00+00:00`)
     .order('done_at', { ascending: true });
+
+  if (logsError) {
+    return res.status(500).json({ error: '入浴ログの取得に失敗しました' });
+  }
 
   // 今週の日ごとのデータを組み立て
   const days = [];
@@ -56,12 +60,16 @@ module.exports = async function handler(req, res) {
   const rate = days.length > 0 ? doneDays.length / days.length : 0;
 
   // 連続記録を算出（今日から遡って連続で入浴した日数）
-  const { data: allLogs } = await supabaseAdmin
+  const { data: allLogs, error: allLogsError } = await supabaseAdmin
     .from('bath_logs')
     .select('done_at')
     .eq('user_id', user.id)
     .order('done_at', { ascending: false })
     .limit(90);
+
+  if (allLogsError) {
+    return res.status(500).json({ error: '連続記録の取得に失敗しました' });
+  }
 
   let streak = 0;
   const checkDate = new Date(jstNow);

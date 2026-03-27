@@ -36,11 +36,23 @@ module.exports = async function handler(req, res) {
 
   const sessionDate = getSessionDate();
 
-  // 通知が有効かつ、当日まだ「入った！」していないユーザーを取得
+  // 通知が有効かつ、該当時刻のユーザーを取得
+  // pg_cronは段階ごとに固定時刻で呼ぶため、notify_timeで絞り込む
+  const now = new Date();
+  const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const jstH = jstNow.getUTCHours();
+  const jstM = jstNow.getUTCMinutes();
+  // 段階に応じたオフセットを引いて、設定時刻に該当するユーザーを絞る
+  const offsetMinutes = (stage - 1) * 15;
+  const targetM = (jstM - offsetMinutes + 60) % 60;
+  const targetH = jstM < offsetMinutes ? (jstH - 1 + 24) % 24 : jstH;
+  const targetTime = `${String(targetH).padStart(2, '0')}:${String(targetM).padStart(2, '0')}`;
+
   const { data: subscriptions, error } = await supabaseAdmin
     .from('subscriptions')
     .select('*')
-    .eq('enabled', true);
+    .eq('enabled', true)
+    .eq('notify_time', targetTime);
 
   if (error) {
     return res.status(500).json({ error: error.message });
