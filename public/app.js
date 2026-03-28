@@ -168,9 +168,26 @@ async function showStatsScreen() {
 // --- チャット ---
 
 async function loadChatHistory() {
-  // 初回はチャットエリアを空にしておく（セッションはサーバー側で管理）
   const chatArea = document.getElementById('chat-area');
   chatArea.innerHTML = '';
+
+  try {
+    const data = await apiFetch('/api/chat');
+    if (data.error || !data.messages) return;
+
+    for (const msg of data.messages) {
+      appendMessage(msg.role, msg.content);
+    }
+
+    if (typeof data.remaining === 'number') {
+      updateRemaining(data.remaining);
+    }
+    if (data.limited) {
+      disableChat();
+    }
+  } catch (err) {
+    console.error('チャット履歴の取得に失敗:', err);
+  }
 }
 
 async function sendMessage() {
@@ -326,6 +343,17 @@ async function loadSettings() {
 
   // お風呂の時間をlocalStorageから読み込み
   document.getElementById('bath-duration').value = getBathDuration();
+
+  // サーバーから通知設定を取得
+  try {
+    const data = await apiFetch('/api/settings');
+    if (!data.error) {
+      document.getElementById('notify-time').value = data.notify_time;
+      document.getElementById('notify-toggle').checked = data.enabled;
+    }
+  } catch (err) {
+    console.error('設定の取得に失敗:', err);
+  }
 }
 
 async function requestPermission() {

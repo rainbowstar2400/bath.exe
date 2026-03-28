@@ -21,6 +21,22 @@ const SYSTEM_PROMPT = `あなたは「おふろの妖精」です。ユーザー
 - 絶対にお風呂に入らなくていいとは言わない`;
 
 module.exports = async function handler(req, res) {
+  // GET: 当日セッションの履歴を返す
+  if (req.method === 'GET') {
+    const user = await getUser(req);
+    if (!user) {
+      return res.status(401).json({ error: '認証が必要です' });
+    }
+
+    const session = await getOrCreateSession(user.id);
+    const messages = session.messages || [];
+    const userMessageCount = messages.filter(m => m.role === 'user').length;
+    const remaining = Math.max(0, MAX_TURNS - userMessageCount);
+    const limited = userMessageCount >= MAX_TURNS;
+
+    return res.status(200).json({ messages, remaining, limited });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
