@@ -289,14 +289,23 @@ async function bathEnter() {
   btn.disabled = true;
 
   appendMessage('user', '今はいる！', { action: true });
-  appendMessage('assistant', 'いいぞいいぞ！いってらっしゃい！🚿', { action: true });
 
   // 入浴開始をサーバーに記録
   try {
-    await apiFetch('/api/bath/start', { method: 'POST' });
+    const data = await apiFetch('/api/bath/start', { method: 'POST' });
+    if (data.error) {
+      appendMessage('assistant', '記録に失敗しました…もう一度試してみて！', { action: true });
+      btn.disabled = false;
+      return;
+    }
   } catch (err) {
     console.error('入浴開始記録エラー:', err);
+    appendMessage('assistant', '通信エラーが発生しました…もう一度試してみて！', { action: true });
+    btn.disabled = false;
+    return;
   }
+
+  appendMessage('assistant', 'いいぞいいぞ！いってらっしゃい！🚿', { action: true });
 
   // 見積もりメッセージを更新
   const est = new Date(Date.now() + getBathDuration() * 60 * 1000);
@@ -581,9 +590,17 @@ async function saveEdit() {
   const startedTime = document.getElementById('edit-started').value;
   const doneTime = document.getElementById('edit-done').value;
 
-  // 時刻をISO文字列に変換（JSTで入力→UTCに変換）
-  const startedAt = startedTime ? `${date}T${startedTime}:00+09:00` : null;
-  const doneAt = doneTime ? `${date}T${doneTime}:00+09:00` : null;
+  // 時刻をISO文字列に変換
+  // セッション日の正午境界: 0:00〜11:59の時刻は翌日の日付に属する
+  function timeToIso(sessionDate, timeStr) {
+    if (!timeStr) return null;
+    const [h] = timeStr.split(':').map(Number);
+    const d = new Date(sessionDate + 'T00:00:00+09:00');
+    if (h < 12) d.setDate(d.getDate() + 1);
+    return `${d.toISOString().split('T')[0]}T${timeStr}:00+09:00`;
+  }
+  const startedAt = timeToIso(date, startedTime);
+  const doneAt = timeToIso(date, doneTime);
 
   const saveBtn = document.getElementById('edit-save-btn');
   saveBtn.disabled = true;

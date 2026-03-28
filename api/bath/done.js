@@ -1,6 +1,5 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { supabaseAdmin, getUser } = require('../_lib/supabase');
-const { getSessionDate } = require('../_lib/session');
 
 const anthropic = new Anthropic();
 
@@ -11,18 +10,20 @@ module.exports = async function handler(req, res) {
 
   const user = await getUser(req);
   if (!user) {
-    return res.status(401).json({ error: '認証が必��です' });
+    return res.status(401).json({ error: '認証が必要です' });
   }
 
-  const sessionDate = getSessionDate();
   const now = new Date();
 
-  // 当日のレコードを取得（started_atがあってdone_atがないもの）
+  // done_atがnullの進行中レコードを検索（session_dateに依存しない）
   const { data: log } = await supabaseAdmin
     .from('bath_logs')
     .select('*')
     .eq('user_id', user.id)
-    .eq('session_date', sessionDate)
+    .is('done_at', null)
+    .not('started_at', 'is', null)
+    .order('started_at', { ascending: false })
+    .limit(1)
     .single();
 
   if (!log) {

@@ -54,11 +54,12 @@ module.exports = async function handler(req, res) {
   }
 
   // 連続記録を算出（今日から遡って連続で入浴した日数）
+  // started_at または done_at があれば入浴とみなす（旧データ互換）
   const { data: allLogs, error: allLogsError } = await supabaseAdmin
     .from('bath_logs')
     .select('session_date')
     .eq('user_id', user.id)
-    .not('started_at', 'is', null)
+    .or('started_at.not.is.null,done_at.not.is.null')
     .order('session_date', { ascending: false })
     .limit(90);
 
