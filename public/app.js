@@ -4,7 +4,7 @@ const SUPABASE_URL = '';  // デプロイ時に設定
 const SUPABASE_ANON_KEY = '';  // デプロイ時に設定
 const VAPID_PUBLIC_KEY = '';  // デプロイ時に設定
 
-let supabase;
+let supabaseClient;
 let session = null;
 
 // 初期化
@@ -16,15 +16,15 @@ async function initApp() {
     return;
   }
 
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // 既存セッションを確認
-  const { data: { session: existingSession } } = await supabase.auth.getSession();
+  const { data: { session: existingSession } } = await supabaseClient.auth.getSession();
   if (existingSession) {
     session = existingSession;
   } else {
     // 匿名認証
-    const { data, error } = await supabase.auth.signInAnonymously();
+    const { data, error } = await supabaseClient.auth.signInAnonymously();
     if (error) {
       console.error('認証エラー:', error);
       return;
