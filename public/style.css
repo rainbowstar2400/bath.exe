@@ -1,0 +1,541 @@
+/* ===================================
+   Bath.exe — 銭湯ポップ v2
+   =================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --peach: #ffb4a2;
+  --coral: #e5989b;
+  --rose: #b5838d;
+  --cream: #fff8f0;
+  --warm-white: #fffaf5;
+  --tile-blue: #89c2d9;
+  --tile-blue-deep: #468faf;
+  --navy: #2b2d42;
+  --navy-soft: #3d405b;
+  --text: #2b2d42;
+  --text-mid: #6d6875;
+  --text-muted: #b5b0bd;
+  --card: #ffffff;
+  --border: rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px rgba(109, 104, 117, 0.07);
+  --shadow-md: 0 4px 20px rgba(109, 104, 117, 0.1);
+  --shadow-lg: 0 12px 40px rgba(109, 104, 117, 0.14);
+  --shadow-glow-peach: 0 6px 30px rgba(255, 180, 162, 0.4);
+  --shadow-glow-blue: 0 6px 30px rgba(137, 194, 217, 0.45);
+  --r: 20px;
+  --r-sm: 14px;
+  --r-pill: 100px;
+}
+
+body {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  background: var(--cream);
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 180, 162, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(137, 194, 217, 0.1) 0%, transparent 50%);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 430px;
+  margin: 0 auto;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- 泡 --- */
+.bubbles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+  max-width: 430px;
+  margin: 0 auto;
+}
+
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(137,194,217,0.12));
+  border: 1px solid rgba(255,255,255,0.5);
+  animation: float linear infinite;
+  opacity: 0;
+}
+
+.bubble:nth-child(1) { width: 22px; height: 22px; left: 8%;  animation-duration: 14s; animation-delay: 0s; }
+.bubble:nth-child(2) { width: 14px; height: 14px; left: 25%; animation-duration: 11s; animation-delay: 2s; }
+.bubble:nth-child(3) { width: 18px; height: 18px; left: 52%; animation-duration: 16s; animation-delay: 4s; }
+.bubble:nth-child(4) { width: 10px; height: 10px; left: 72%; animation-duration: 12s; animation-delay: 1s; }
+.bubble:nth-child(5) { width: 16px; height: 16px; left: 88%; animation-duration: 13s; animation-delay: 3s; }
+.bubble:nth-child(6) { width: 12px; height: 12px; left: 40%; animation-duration: 17s; animation-delay: 6s; }
+
+@keyframes float {
+  0%   { transform: translateY(100vh) scale(0.3); opacity: 0; }
+  8%   { opacity: 0.5; }
+  85%  { opacity: 0.2; }
+  100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+}
+
+/* --- スクリーン --- */
+.screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 0 20px 20px;
+  position: relative;
+  z-index: 1;
+  animation: screenIn 0.3s ease;
+}
+
+@keyframes screenIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* --- 上部ナビ --- */
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0 0;
+}
+
+.top-nav button {
+  background: none;
+  border: none;
+  color: var(--text-mid);
+  font-size: 16px;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  transition: color 0.2s, background 0.2s;
+}
+
+.top-nav button:hover {
+  color: var(--navy);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* --- ヘッダー（設定・統計画面用） --- */
+header {
+  text-align: center;
+  padding: 8px 0 4px;
+}
+
+header h1 {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--navy);
+  letter-spacing: 2px;
+}
+
+/* --- チャットエリア --- */
+.chat-area-wrap {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.chat-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: var(--navy);
+  opacity: 0.04;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.chat-area {
+  position: relative;
+  height: 100%;
+  overflow-y: auto;
+  padding: 8px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.06) transparent;
+}
+
+.chat-area::-webkit-scrollbar { width: 3px; }
+.chat-area::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.06);
+  border-radius: 3px;
+}
+
+/* メッセージラッパー */
+.message-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin: 6px 0;
+  animation: msgPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.message-wrap.user {
+  flex-direction: row-reverse;
+}
+
+.message-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 500;
+  flex-shrink: 0;
+  padding-bottom: 2px;
+}
+
+.message {
+  padding: 10px 14px;
+  border-radius: 18px;
+  max-width: 80%;
+  word-wrap: break-word;
+  line-height: 1.7;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+@keyframes msgPop {
+  from { opacity: 0; transform: scale(0.92) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.message.user {
+  background: rgba(229, 152, 155, 0.75);
+  color: #fff;
+  border-bottom-right-radius: 6px;
+}
+
+.message.assistant {
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--text);
+  border-bottom-left-radius: 6px;
+}
+
+/* ボタンアクション（ブルー系） */
+.message.user.action {
+  background: rgba(70, 143, 175, 0.75);
+}
+
+.message.assistant.action {
+  background: rgba(43, 45, 66, 0.06);
+  color: var(--navy-soft);
+}
+
+
+/* =================================
+   下部アクションエリア
+   ================================= */
+.bottom-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.btn-bath {
+  width: 100%;
+  padding: 20px;
+  border-radius: var(--r);
+  border: none;
+  background: rgba(70, 143, 175, 0.85);
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+  box-shadow: 0 4px 16px rgba(70, 143, 175, 0.2);
+}
+
+.btn-bath:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(70, 143, 175, 0.35);
+}
+
+.btn-bath:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-bath:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-bath-label {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+.btn-bath-sub {
+  display: none;
+}
+
+/* 「はいった！」フェーズ */
+.btn-bath.phase-done {
+  background: rgba(229, 152, 155, 0.8);
+  box-shadow: 0 4px 16px rgba(229, 152, 155, 0.2);
+}
+
+/* 完了状態 */
+.btn-bath.phase-complete {
+  background: rgba(123, 200, 156, 0.8);
+  box-shadow: 0 4px 16px rgba(123, 200, 156, 0.2);
+  cursor: default;
+}
+
+/* =================================
+   チャット入力（コンパクト）
+   ================================= */
+.chat-controls {
+  padding: 4px 0 0;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.input-row input {
+  flex: 1;
+  padding: 11px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-row input::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.input-row input:focus {
+  border-color: var(--peach);
+  box-shadow: 0 0 0 3px rgba(255, 180, 162, 0.12);
+}
+
+.input-row input:disabled { opacity: 0.4; }
+
+.input-row button {
+  padding: 11px 18px;
+  border: none;
+  border-radius: var(--r-pill);
+  background: var(--navy);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.2s;
+  white-space: nowrap;
+}
+
+.input-row button:hover:not(:disabled) {
+  transform: scale(1.03);
+}
+
+.input-row button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.input-row button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.remaining {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+  font-weight: 600;
+  margin-top: 6px;
+  padding-right: 4px;
+}
+
+/* =================================
+   設定画面
+   ================================= */
+.settings-form {
+  flex: 1;
+  padding: 16px 0;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px;
+  margin-bottom: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-sm);
+}
+
+.setting-item label {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.setting-item input[type="time"] {
+  padding: 8px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--cream);
+  color: var(--text);
+  font-size: 16px;
+  font-family: inherit;
+  font-weight: 700;
+}
+
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+}
+
+.toggle input { opacity: 0; width: 0; height: 0; }
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #ddd;
+  border-radius: 28px;
+  transition: 0.3s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: 0.3s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+
+.toggle input:checked + .toggle-slider {
+  background: var(--coral);
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(24px);
+}
+
+.btn-perm {
+  width: 100%;
+  padding: 16px;
+  margin: 14px 0;
+  border: 2px dashed var(--coral);
+  border-radius: var(--r);
+  background: rgba(229, 152, 155, 0.06);
+  color: var(--rose);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-perm:hover {
+  background: rgba(229, 152, 155, 0.12);
+}
+
+.btn-save {
+  width: 100%;
+  padding: 16px;
+  margin: 16px 0;
+  border: none;
+  border-radius: var(--r);
+  background: var(--navy);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s;
+  box-shadow: var(--shadow-md);
+  letter-spacing: 1px;
+}
+
+.btn-save:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* =================================
+   統計画面
+   ================================= */
+.stats-content {
+  flex: 1;
+  padding: 16px 0;
+}
+
+.streak {
+  font-size: 22px;
+  font-weight: 900;
+  text-align: center;
+  padding: 28px 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.streak::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--tile-blue);
+}
+
+.weekly-rate {
+  font-size: 14px;
+  text-align: center;
+  color: var(--text-mid);
+  padding: 14px 0;
+  font-weight: 700;
+}
+
+.weekly-days {
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.weekly-days li {
+  padding: 14px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+}
+
+.weekly-days li:last-child { border-bottom: none; }

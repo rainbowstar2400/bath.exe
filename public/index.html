@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#fff8f0">
+  <title>Bath.exe 〜いいから入れ〜</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon-192.png">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- 浮遊する泡の装飾 -->
+  <div class="bubbles" aria-hidden="true">
+    <span class="bubble"></span>
+    <span class="bubble"></span>
+    <span class="bubble"></span>
+    <span class="bubble"></span>
+    <span class="bubble"></span>
+    <span class="bubble"></span>
+  </div>
+
+  <!-- メイン画面 -->
+  <div id="main-screen" class="screen">
+    <nav class="top-nav">
+      <button onclick="showStatsScreen()" aria-label="きろく">📊</button>
+      <button onclick="showSettingsScreen()" aria-label="設定">⚙️</button>
+    </nav>
+
+    <!-- チャットエリア（flex:1で広がる） -->
+    <div class="chat-area-wrap">
+      <div class="chat-watermark" aria-hidden="true">Bath.exe</div>
+      <div id="chat-area" class="chat-area"></div>
+    </div>
+
+    <!-- 下部アクションエリア -->
+    <div class="bottom-actions">
+      <div class="chat-controls">
+        <div class="input-row">
+          <input type="text" id="message-input" placeholder="言い訳をどうぞ…"
+                 onkeydown="if(event.key==='Enter')sendMessage()">
+          <button id="send-btn" onclick="sendMessage()">送信</button>
+        </div>
+        <p id="remaining" class="remaining">残り 10/10</p>
+      </div>
+      <button id="bath-btn" class="btn-bath" onclick="handleBathAction()">
+        <span id="bath-btn-label" class="btn-bath-label">今はいる！</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 設定画面 -->
+  <div id="settings-screen" class="screen" style="display:none">
+    <nav class="top-nav">
+      <button onclick="showMainScreen()">← もどる</button>
+      <span></span>
+    </nav>
+
+    <header>
+      <h1>設定</h1>
+    </header>
+
+    <div class="settings-form">
+      <div class="setting-item">
+        <label for="notify-time">通知時刻</label>
+        <input type="time" id="notify-time" value="23:00">
+      </div>
+
+      <div class="setting-item">
+        <label for="notify-toggle">通知</label>
+        <label class="toggle">
+          <input type="checkbox" id="notify-toggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <button id="perm-btn" class="btn-perm" onclick="requestPermission()" style="display:none">
+        通知を許可する
+      </button>
+
+      <button class="btn-save" onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+
+  <!-- 統計画面 -->
+  <div id="stats-screen" class="screen" style="display:none">
+    <nav class="top-nav">
+      <button onclick="showMainScreen()">← もどる</button>
+      <span></span>
+    </nav>
+
+    <header>
+      <h1>きろく</h1>
+    </header>
+
+    <div id="stats-content" class="stats-content">
+      <p id="streak" class="streak">🔥 連続記録：0日</p>
+      <p id="weekly-rate" class="weekly-rate">今週の入浴率  0/0  0%</p>
+      <ul id="weekly-days" class="weekly-days"></ul>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
