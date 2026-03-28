@@ -81,27 +81,32 @@ async function subscribePush() {
     return false;
   }
 
-  const reg = await navigator.serviceWorker.ready;
-  const subscription = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-  });
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
 
-  const subJson = subscription.toJSON();
-  const result = await apiFetch('/api/subscriptions/register', {
-    method: 'POST',
-    body: JSON.stringify({
-      endpoint: subJson.endpoint,
-      keys: subJson.keys,
-    }),
-  });
+    const subJson = subscription.toJSON();
+    const result = await apiFetch('/api/subscriptions/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        endpoint: subJson.endpoint,
+        keys: subJson.keys,
+      }),
+    });
 
-  if (result.error) {
-    console.error('サブスク登録エラー:', result.error);
+    if (result.error) {
+      console.error('サブスク登録エラー:', result.error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('プッシュ通知の登録に失敗:', err);
     return false;
   }
-
-  return true;
 }
 
 // VAPID公開鍵の変換
@@ -207,6 +212,7 @@ async function sendMessage() {
   appendMessage('user', message);
   setLoading(true);
 
+  let chatLimited = false;
   try {
     const data = await apiFetch('/api/chat', {
       method: 'POST',
@@ -225,12 +231,13 @@ async function sendMessage() {
 
     if (data.limited) {
       disableChat();
+      chatLimited = true;
     }
   } catch (err) {
     console.error('送信エラー:', err);
     appendMessage('assistant', '通信エラーが発生しました');
   } finally {
-    setLoading(false);
+    if (!chatLimited) setLoading(false);
   }
 }
 
@@ -332,7 +339,7 @@ async function bathDone() {
     const data = await apiFetch('/api/bath/done', { method: 'POST' });
 
     if (data.error) {
-      appendMessage('assistant', 'エラーが発生しました');
+      appendMessage('assistant', 'エラーが発生しました。もう一度試してみて！', { action: true });
       btn.disabled = false;
       return;
     }
@@ -340,13 +347,15 @@ async function bathDone() {
     appendMessage('assistant', data.reply, { action: true });
   } catch (err) {
     console.error('入浴記録エラー:', err);
-    appendMessage('assistant', 'えらい！おつかれさま！（通信エラーのため記録できませんでした）', { action: true });
+    appendMessage('assistant', '通信エラーが発生しました。もう一度試してみて！', { action: true });
+    btn.disabled = false;
+    return;
   }
 
   // 見積もりメッセージを更新（押下時刻を使用）
   document.getElementById('estimate-msg').textContent = `今日は ${formatTime(doneTime)} に入れました！`;
 
-  // 完了状態に（通信失敗でもUI上は完了にする）
+  // 完了状態に（成功時のみ）
   bathPhase = 'complete';
   btn.classList.remove('phase-done');
   btn.classList.add('phase-complete');
@@ -397,10 +406,14 @@ async function saveSettings() {
   localStorage.setItem('bath_duration', bathDuration);
 
   if (session) {
-    await apiFetch('/api/settings/update', {
+    const result = await apiFetch('/api/settings/update', {
       method: 'POST',
       body: JSON.stringify({ notify_time: notifyTime, enabled }),
     });
+    if (result.error) {
+      alert('設定の保存に失敗しました: ' + result.error);
+      return;
+    }
   }
 
   // 見積もりメッセージを即時反映
@@ -595,9 +608,16 @@ async function saveEdit() {
   function timeToIso(sessionDate, timeStr) {
     if (!timeStr) return null;
     const [h] = timeStr.split(':').map(Number);
-    const d = new Date(sessionDate + 'T00:00:00+09:00');
-    if (h < 12) d.setDate(d.getDate() + 1);
-    return `${d.toISOString().split('T')[0]}T${timeStr}:00+09:00`;
+    if (h < 12) {
+      // 翌日の日付を算出（toISOStringはUTCに戻るため文字列操作で算出）
+      const d = new Date(sessionDate + 'T12:00:00+09:00');
+      d.setDate(d.getDate() + 1);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}T${timeStr}:00+09:00`;
+    }
+    return `${sessionDate}T${timeStr}:00+09:00`;
   }
   const startedAt = timeToIso(date, startedTime);
   const doneAt = timeToIso(date, doneTime);

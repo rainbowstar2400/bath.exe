@@ -57,6 +57,7 @@ module.exports = async function handler(req, res) {
 
   if (updateError) {
     console.error('入浴完了記録エラー:', updateError.message);
+    return res.status(500).json({ error: '入浴完了の記録に失敗しました' });
   }
 
   // Claude APIで褒めメッセージを生成

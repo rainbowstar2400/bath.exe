@@ -23,19 +23,24 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // subscriptions テーブルを更新
+  // subscriptions テーブルを更新（通知許可済みユーザーのみ行が存在する）
   const updates = {};
   if (notify_time !== undefined) updates.notify_time = notify_time;
   if (enabled !== undefined) updates.enabled = enabled;
   updates.updated_at = new Date().toISOString();
 
-  const { error } = await supabaseAdmin
+  const { data: updated, error } = await supabaseAdmin
     .from('subscriptions')
     .update(updates)
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .select('id');
 
   if (error) {
     return res.status(500).json({ error: error.message });
+  }
+
+  if (!updated || updated.length === 0) {
+    return res.status(200).json({ ok: true, warning: '通知が未許可のため、通知設定は保存されませんでした' });
   }
 
   // 通知時刻が変更された場合、pg_cronジョブを更新

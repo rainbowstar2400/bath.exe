@@ -83,13 +83,23 @@ module.exports = async function handler(req, res) {
       });
 
       const text = message.content[0].text;
-      // Claude APIがマークダウンで囲む場合があるためJSON部分を抽出
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        console.error('通知文のJSON解析に失敗:', text);
-        continue;
+      // JSONパース: まず直接パースを試み、失敗時は正規表現で抽出
+      let notification;
+      try {
+        notification = JSON.parse(text);
+      } catch {
+        const jsonMatch = text.match(/\{[^{}]*\}/);
+        if (!jsonMatch) {
+          console.error('通知文のJSON解析に失敗:', text);
+          continue;
+        }
+        try {
+          notification = JSON.parse(jsonMatch[0]);
+        } catch {
+          console.error('通知文のJSON解析に失敗:', text);
+          continue;
+        }
       }
-      const notification = JSON.parse(jsonMatch[0]);
 
       // バイブレーションパターン（段階に応じて長くする）
       const vibrate = {
