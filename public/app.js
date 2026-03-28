@@ -1,14 +1,27 @@
 // Supabase匿名認証とAPI呼び出しのヘルパー
 
-const SUPABASE_URL = '';  // デプロイ時に設定
-const SUPABASE_ANON_KEY = '';  // デプロイ時に設定
-const VAPID_PUBLIC_KEY = '';  // デプロイ時に設定
+let SUPABASE_URL = '';
+let SUPABASE_ANON_KEY = '';
+let VAPID_PUBLIC_KEY = '';
 
 let supabaseClient;
 let session = null;
 
 // 初期化
 async function initApp() {
+  // サーバーから公開設定を取得
+  try {
+    const res = await fetch('/api/config');
+    if (res.ok) {
+      const config = await res.json();
+      SUPABASE_URL = config.supabaseUrl;
+      SUPABASE_ANON_KEY = config.supabaseAnonKey;
+      VAPID_PUBLIC_KEY = config.vapidPublicKey;
+    }
+  } catch (err) {
+    console.warn('設定の取得に失敗:', err);
+  }
+
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.warn('Supabase未設定: ローカルモードで動作します');
     showMainScreen();
