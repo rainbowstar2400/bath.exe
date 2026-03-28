@@ -12,6 +12,7 @@ async function initApp() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.warn('Supabase未設定: ローカルモードで動作します');
     showMainScreen();
+    startClock();
     return;
   }
 
@@ -39,6 +40,7 @@ async function initApp() {
   // 画面初期化
   showMainScreen();
   loadChatHistory();
+  startClock();
 }
 
 // 認証ヘッダー付きfetch
@@ -92,6 +94,40 @@ function urlBase64ToUint8Array(base64String) {
     outputArray[i] = rawData.charCodeAt(i);
   }
   return outputArray;
+}
+
+// --- 時計と見積もり ---
+
+let clockInterval = null;
+
+function getBathDuration() {
+  return parseInt(localStorage.getItem('bath_duration') || '20', 10);
+}
+
+function formatTime(date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('current-time').textContent = formatTime(now);
+
+  if (bathPhase === 'enter') {
+    const est = new Date(now.getTime() + getBathDuration() * 60 * 1000);
+    document.getElementById('estimate-msg').textContent = `今入れば ${formatTime(est)} には出れるよ！`;
+  }
+  // 他のフェーズではbathEnter/bathDoneで直接更新する
+}
+
+function startClock() {
+  updateClock();
+  // 次の分の00秒に合わせてから毎分更新
+  const now = new Date();
+  const msToNextMin = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+  setTimeout(() => {
+    updateClock();
+    clockInterval = setInterval(updateClock, 60000);
+  }, msToNextMin);
 }
 
 // --- 画面制御 ---
@@ -210,6 +246,10 @@ async function bathEnter() {
   appendMessage('user', '今はいる！', { action: true });
   appendMessage('assistant', 'いいぞいいぞ！いってらっしゃい！🚿', { action: true });
 
+  // 見積もりメッセージを更新
+  const est = new Date(Date.now() + getBathDuration() * 60 * 1000);
+  document.getElementById('estimate-msg').textContent = `${formatTime(est)} くらいには出れるね！`;
+
   // フェーズを「はいった！」に切り替え
   bathPhase = 'done';
   btn.classList.add('phase-done');
@@ -233,6 +273,9 @@ async function bathDone() {
 
   appendMessage('assistant', data.reply, { action: true });
 
+  // 見積もりメッセージを更新
+  document.getElementById('estimate-msg').textContent = `今日は ${formatTime(new Date())} に入れました！`;
+
   // 完了状態に
   bathPhase = 'complete';
   btn.classList.remove('phase-done');
@@ -250,6 +293,9 @@ async function loadSettings() {
   } else {
     permBtn.style.display = 'block';
   }
+
+  // お風呂の時間をlocalStorageから読み込み
+  document.getElementById('bath-duration').value = getBathDuration();
 }
 
 async function requestPermission() {
@@ -263,11 +309,17 @@ async function requestPermission() {
 async function saveSettings() {
   const notifyTime = document.getElementById('notify-time').value;
   const enabled = document.getElementById('notify-toggle').checked;
+  const bathDuration = document.getElementById('bath-duration').value;
 
-  await apiFetch('/api/settings/update', {
-    method: 'POST',
-    body: JSON.stringify({ notify_time: notifyTime, enabled }),
-  });
+  // お風呂の時間をlocalStorageに保存
+  localStorage.setItem('bath_duration', bathDuration);
+
+  if (session) {
+    await apiFetch('/api/settings/update', {
+      method: 'POST',
+      body: JSON.stringify({ notify_time: notifyTime, enabled }),
+    });
+  }
 
   alert('設定を保存しました');
 }

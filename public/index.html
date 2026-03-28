@@ -31,6 +31,12 @@
       <button onclick="showSettingsScreen()" aria-label="設定">⚙️</button>
     </nav>
 
+    <!-- 時計エリア -->
+    <div class="clock-area">
+      <p id="current-time" class="current-time">--:--</p>
+      <p id="estimate-msg" class="estimate-msg">今入れば --:-- には出れるよ！</p>
+    </div>
+
     <!-- チャットエリア（flex:1で広がる） -->
     <div class="chat-area-wrap">
       <div class="chat-watermark" aria-hidden="true">Bath.exe</div>
@@ -77,6 +83,31 @@
           <span class="toggle-slider"></span>
         </label>
       </div>
+
+      <div class="setting-item">
+        <label for="bath-duration">お風呂の時間</label>
+        <select id="bath-duration">
+          <option value="5">5分</option>
+          <option value="10">10分</option>
+          <option value="15">15分</option>
+          <option value="20" selected>20分</option>
+          <option value="25">25分</option>
+          <option value="30">30分</option>
+          <option value="35">35分</option>
+          <option value="40">40分</option>
+          <option value="45">45分</option>
+          <option value="50">50分</option>
+          <option value="55">55分</option>
+          <option value="60">60分</option>
+          <option value="65">65分</option>
+          <option value="70">70分</option>
+          <option value="75">75分</option>
+          <option value="80">80分</option>
+          <option value="85">85分</option>
+          <option value="90">90分</option>
+        </select>
+      </div>
+      <p class="setting-tips">💡 少し長めに見積もっておくのがおすすめです</p>
 
       <button id="perm-btn" class="btn-perm" onclick="requestPermission()" style="display:none">
         通知を許可する
