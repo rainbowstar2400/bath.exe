@@ -291,6 +291,13 @@ async function bathEnter() {
   appendMessage('user', '今はいる！', { action: true });
   appendMessage('assistant', 'いいぞいいぞ！いってらっしゃい！🚿', { action: true });
 
+  // 入浴開始をサーバーに記録
+  try {
+    await apiFetch('/api/bath/start', { method: 'POST' });
+  } catch (err) {
+    console.error('入浴開始記録エラー:', err);
+  }
+
   // 見積もりメッセージを更新
   const est = new Date(Date.now() + getBathDuration() * 60 * 1000);
   document.getElementById('estimate-msg').textContent = `${formatTime(est)} くらいには出れるね！`;
@@ -393,54 +400,212 @@ async function saveSettings() {
   alert('設定を保存しました');
 }
 
-// --- 統計画面 ---
+// --- 記録画面 ---
 
 async function loadStats() {
+  const summaryEl = document.getElementById('stats-summary');
+  const listEl = document.getElementById('stats-days');
+
   let data;
   try {
     data = await apiFetch('/api/stats');
   } catch (err) {
-    console.error('統計取得エラー:', err);
+    console.error('記録取得エラー:', err);
     data = { error: true };
   }
 
   if (data.error) {
-    document.getElementById('streak').textContent = '';
-    document.getElementById('weekly-rate').textContent = 'データの取得に失敗しました';
-    document.getElementById('weekly-days').innerHTML = '';
+    summaryEl.textContent = 'データの取得に失敗しました';
+    listEl.innerHTML = '';
     return;
   }
 
-  const streakEl = document.getElementById('streak');
-  streakEl.textContent = `🔥 連続記録：${data.streak}日`;
+  // サマリー行
+  const bathDays = data.days.filter(d => d.started_at || d.done_at).length;
+  summaryEl.textContent = '';
+  const streakSpan = document.createElement('span');
+  streakSpan.className = 'stats-streak';
+  streakSpan.textContent = `🔥 ${data.streak}日連続`;
+  const countSpan = document.createElement('span');
+  countSpan.className = 'stats-count';
+  countSpan.textContent = `${bathDays}/7日入浴`;
+  summaryEl.appendChild(streakSpan);
+  summaryEl.appendChild(countSpan);
 
-  const rateEl = document.getElementById('weekly-rate');
-  const doneDays = data.weekly.days.filter(d => d.done_at).length;
-  const totalDays = data.weekly.days.length;
-  const percent = Math.round(data.weekly.rate * 100);
-  rateEl.textContent = `今週の入浴率  ${doneDays}/${totalDays}  ${percent}%`;
+  // 登録日（グレーアウト判定用）
+  const registeredDate = data.registered_at
+    ? new Date(data.registered_at).toISOString().split('T')[0]
+    : null;
 
+  // 日別カード
   const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
-  const listEl = document.getElementById('weekly-days');
   listEl.innerHTML = '';
-  for (const day of data.weekly.days) {
-    const d = new Date(day.date + 'T00:00:00+09:00');
-    const dayName = dayNames[d.getDay()];
-    const li = document.createElement('li');
 
-    if (day.done_at) {
-      const time = new Date(day.done_at);
-      const jst = new Date(time.getTime() + 9 * 60 * 60 * 1000);
-      const h = String(jst.getUTCHours()).padStart(2, '0');
-      const m = String(jst.getUTCMinutes()).padStart(2, '0');
-      const mark = day.praise_level === 'excellent' ? ' ⭐ 早い！' :
-                   day.praise_level === 'late' ? ' 😅 ギリギリ' : '';
-      li.textContent = `${dayName}  ${h}:${m}${mark}`;
-    } else {
-      li.textContent = `${dayName}  --:--  ❌`;
+  for (const day of data.days) {
+    const d = new Date(day.date + 'T00:00:00+09:00');
+    const month = d.getMonth() + 1;
+    const date = d.getDate();
+    const dayName = dayNames[d.getDay()];
+
+    const card = document.createElement('div');
+    card.className = 'day-card';
+
+    // アプリ使用開始前はグレーアウト
+    if (registeredDate && day.date < registeredDate) {
+      card.classList.add('grayed-out');
+      const header = document.createElement('div');
+      header.className = 'day-card-header';
+      header.textContent = `${month}/${date}(${dayName})`;
+      card.appendChild(header);
+      listEl.appendChild(card);
+      continue;
     }
 
-    listEl.appendChild(li);
+    const hasBath = day.started_at || day.done_at;
+
+    // ヘッダー行（日付 + マーク）
+    const header = document.createElement('div');
+    header.className = 'day-card-header';
+    const dateText = document.createElement('span');
+    dateText.textContent = `${month}/${date}(${dayName})`;
+    header.appendChild(dateText);
+
+    if (!hasBath) {
+      const mark = document.createElement('span');
+      mark.className = 'day-card-mark miss';
+      mark.textContent = '❌';
+      header.appendChild(mark);
+    } else if (day.praise_level === 'excellent') {
+      const mark = document.createElement('span');
+      mark.className = 'day-card-mark excellent';
+      mark.textContent = '⭐ 早い！';
+      header.appendChild(mark);
+    }
+    card.appendChild(header);
+
+    if (hasBath) {
+      const detail = document.createElement('div');
+      detail.className = 'day-card-detail';
+
+      const startedTime = formatJstTime(day.started_at);
+      const bathDuration = getBathDuration();
+
+      // done_atがない場合は推測値を計算
+      let doneTime;
+      let isEstimated = false;
+      if (day.done_at) {
+        doneTime = formatJstTime(day.done_at);
+      } else if (day.started_at) {
+        const est = new Date(new Date(day.started_at).getTime() + bathDuration * 60 * 1000);
+        doneTime = formatJstTime(est.toISOString());
+        isEstimated = true;
+      }
+
+      const timeLine = document.createElement('div');
+      timeLine.className = 'day-card-times';
+      timeLine.textContent = `入 ${startedTime || '--:--'}　出 ${doneTime || '--:--'}`;
+      if (isEstimated) {
+        const estLabel = document.createElement('span');
+        estLabel.className = 'estimated-label';
+        estLabel.textContent = '推測';
+        timeLine.appendChild(estLabel);
+      }
+      detail.appendChild(timeLine);
+
+      // 所要時間
+      if (day.started_at && (day.done_at || isEstimated)) {
+        const start = new Date(day.started_at);
+        const end = day.done_at
+          ? new Date(day.done_at)
+          : new Date(start.getTime() + bathDuration * 60 * 1000);
+        const mins = Math.round((end - start) / 60000);
+        const durationLine = document.createElement('div');
+        durationLine.className = 'day-card-duration';
+        durationLine.textContent = `所要 ${mins}分`;
+        if (isEstimated) {
+          durationLine.textContent += '（推測値）';
+        }
+        detail.appendChild(durationLine);
+      }
+
+      card.appendChild(detail);
+    }
+
+    // タップで編集
+    card.addEventListener('click', () => openEditModal(day));
+    card.style.cursor = 'pointer';
+    listEl.appendChild(card);
+  }
+}
+
+// タイムスタンプをJSTのHH:MM形式に変換
+function formatJstTime(isoString) {
+  if (!isoString) return null;
+  const d = new Date(isoString);
+  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  return `${String(jst.getUTCHours()).padStart(2, '0')}:${String(jst.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+// --- 編集モーダル ---
+
+function openEditModal(day) {
+  const overlay = document.getElementById('edit-overlay');
+  const dateLabel = document.getElementById('edit-date-label');
+  const startedInput = document.getElementById('edit-started');
+  const doneInput = document.getElementById('edit-done');
+
+  const d = new Date(day.date + 'T00:00:00+09:00');
+  const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+  const month = d.getMonth() + 1;
+  const date = d.getDate();
+  const dayName = dayNames[d.getDay()];
+  dateLabel.textContent = `${month}/${date}(${dayName})`;
+
+  // 既存値をセット
+  startedInput.value = formatJstTime(day.started_at) || '';
+  doneInput.value = formatJstTime(day.done_at) || '';
+
+  // 編集対象の日付を保持
+  overlay.dataset.editDate = day.date;
+
+  overlay.style.display = 'flex';
+}
+
+function closeEditModal() {
+  document.getElementById('edit-overlay').style.display = 'none';
+}
+
+async function saveEdit() {
+  const overlay = document.getElementById('edit-overlay');
+  const date = overlay.dataset.editDate;
+  const startedTime = document.getElementById('edit-started').value;
+  const doneTime = document.getElementById('edit-done').value;
+
+  // 時刻をISO文字列に変換（JSTで入力→UTCに変換）
+  const startedAt = startedTime ? `${date}T${startedTime}:00+09:00` : null;
+  const doneAt = doneTime ? `${date}T${doneTime}:00+09:00` : null;
+
+  const saveBtn = document.getElementById('edit-save-btn');
+  saveBtn.disabled = true;
+
+  try {
+    const data = await apiFetch('/api/bath/edit', {
+      method: 'POST',
+      body: JSON.stringify({ date, started_at: startedAt, done_at: doneAt }),
+    });
+
+    if (data.error) {
+      alert(data.error);
+      return;
+    }
+
+    closeEditModal();
+    await loadStats();
+  } catch (err) {
+    console.error('編集保存エラー:', err);
+    alert('保存に失敗しました');
+  } finally {
+    saveBtn.disabled = false;
   }
 }
 

@@ -1,5 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { supabaseAdmin, getUser } = require('../_lib/supabase');
+const { getSessionDate } = require('../_lib/session');
 
 const anthropic = new Anthropic();
 
@@ -10,52 +11,51 @@ module.exports = async function handler(req, res) {
 
   const user = await getUser(req);
   if (!user) {
-    return res.status(401).json({ error: '認証が必要です' });
+    return res.status(401).json({ error: '認証が必��です' });
   }
 
-  // ユーザーの通知設定を取得
-  const { data: sub } = await supabaseAdmin
-    .from('subscriptions')
-    .select('notify_time')
+  const sessionDate = getSessionDate();
+  const now = new Date();
+
+  // 当日のレコードを取得（started_atがあってdone_atがないもの）
+  const { data: log } = await supabaseAdmin
+    .from('bath_logs')
+    .select('*')
     .eq('user_id', user.id)
+    .eq('session_date', sessionDate)
     .single();
 
-  const notifyTime = sub?.notify_time || '23:00';
-
-  // 現在のJST時刻と設定時刻を比較して褒め度合いを判定
-  const now = new Date();
-  const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const [notifyH, notifyM] = notifyTime.split(':').map(Number);
-
-  const currentMinutes = jstNow.getUTCHours() * 60 + jstNow.getUTCMinutes();
-  const notifyMinutes = notifyH * 60 + notifyM;
-  const diff = currentMinutes - notifyMinutes;
-
-  let praiseLevel;
-  let praisePrompt;
-
-  if (diff < 0) {
-    praiseLevel = 'excellent';
-    praisePrompt = '設定時刻より早くお風呂に入った人を、めちゃくちゃ大げさに褒めて！天才！すごい！最高！のテンションで。2〜3文で。';
-  } else if (diff <= 30) {
-    praiseLevel = 'good';
-    praisePrompt = 'お風呂に入った人を普通に褒めて！えらい！おつかれ！のテンションで。2〜3文で。';
-  } else {
-    praiseLevel = 'late';
-    praisePrompt = '遅くなったけどお風呂に入った人を褒めて！「遅くても入っただけ偉い！」のテンションで。2〜3文で。';
+  if (!log) {
+    return res.status(404).json({ error: '入浴開始の記録がありません' });
   }
 
-  // 入浴ログを先に記録（AI応答失敗でも記録は残す）
-  const { error: logError } = await supabaseAdmin
-    .from('bath_logs')
-    .insert({
-      user_id: user.id,
-      notify_time: notifyTime,
-      praise_level: praiseLevel,
-    });
+  if (log.done_at) {
+    return res.status(409).json({ error: '本日は既に完了記録があります' });
+  }
 
-  if (logError) {
-    console.error('入浴ログ記録エラー:', logError.message);
+  // 褒め度合いを判定
+  const notifyTime = log.notify_time || '23:00';
+  const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const [notifyH, notifyM] = notifyTime.split(':').map(Number);
+  const currentMinutes = jstNow.getUTCHours() * 60 + jstNow.getUTCMinutes();
+  const notifyMinutes = notifyH * 60 + notifyM;
+
+  const praiseLevel = currentMinutes < notifyMinutes ? 'excellent' : 'good';
+  const praisePrompt = praiseLevel === 'excellent'
+    ? '設定時刻より早くお風呂に入った人を、めちゃくちゃ大げさに褒めて！天才！すごい！最高！のテンションで。2〜3文で。'
+    : 'お風呂に入った人を普通に褒めて！えらい！おつかれ！のテンションで。2〜3文で。';
+
+  // done_atとpraise_levelを更新
+  const { error: updateError } = await supabaseAdmin
+    .from('bath_logs')
+    .update({
+      done_at: now.toISOString(),
+      praise_level: praiseLevel,
+    })
+    .eq('id', log.id);
+
+  if (updateError) {
+    console.error('入浴完了記録エラー:', updateError.message);
   }
 
   // Claude APIで褒めメッセージを生成
@@ -69,7 +69,7 @@ module.exports = async function handler(req, res) {
     });
     reply = response.content[0].text;
   } catch (err) {
-    console.error('Claude API エラー:', err.message);
+    console.error('Claude API エ��ー:', err.message);
     reply = 'おつかれさま！えらい！！🎉';
   }
 

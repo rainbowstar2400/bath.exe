@@ -119,7 +119,7 @@
     </div>
   </div>
 
-  <!-- 統計画面 -->
+  <!-- 記録画面 -->
   <div id="stats-screen" class="screen" style="display:none">
     <nav class="top-nav">
       <button onclick="showMainScreen()">← もどる</button>
@@ -131,9 +131,25 @@
     </header>
 
     <div id="stats-content" class="stats-content">
-      <p id="streak" class="streak">🔥 連続記録：0日</p>
-      <p id="weekly-rate" class="weekly-rate">今週の入浴率  0/0  0%</p>
-      <ul id="weekly-days" class="weekly-days"></ul>
+      <p id="stats-summary" class="stats-summary"></p>
+      <div id="stats-days" class="stats-days"></div>
+    </div>
+  </div>
+
+  <!-- 編集モーダル -->
+  <div id="edit-overlay" class="edit-overlay" style="display:none">
+    <div class="edit-popup">
+      <h2 id="edit-date-label"></h2>
+      <div class="edit-field">
+        <label for="edit-started">入った時刻</label>
+        <input type="time" id="edit-started">
+      </div>
+      <div class="edit-field">
+        <label for="edit-done">出た時刻</label>
+        <input type="time" id="edit-done">
+      </div>
+      <button id="edit-save-btn" class="edit-save-btn" onclick="saveEdit()">保存</button>
+      <button class="edit-cancel-btn" onclick="closeEditModal()">キャンセル</button>
     </div>
   </div>
 

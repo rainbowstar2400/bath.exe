@@ -540,59 +540,191 @@ header h1 {
 }
 
 /* =================================
-   統計画面
+   記録画面
    ================================= */
 .stats-content {
   flex: 1;
   padding: 16px 0;
+  overflow-y: auto;
 }
 
-.streak {
-  font-size: 22px;
-  font-weight: 900;
-  text-align: center;
-  padding: 28px 20px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  box-shadow: var(--shadow-md);
-  position: relative;
-  overflow: hidden;
-}
-
-.streak::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 4px;
-  background: var(--tile-blue);
-}
-
-.weekly-rate {
-  font-size: 14px;
-  text-align: center;
-  color: var(--text-mid);
-  padding: 14px 0;
-  font-weight: 700;
-}
-
-.weekly-days {
-  list-style: none;
+.stats-summary {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--r);
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  margin-bottom: 12px;
+  font-weight: 700;
 }
 
-.weekly-days li {
-  padding: 14px 20px;
+.stats-streak {
   font-size: 14px;
-  font-weight: 500;
-  border-bottom: 1px solid var(--border);
+  color: var(--text-mid);
 }
 
-.weekly-days li:last-child { border-bottom: none; }
+.stats-count {
+  font-size: 16px;
+  color: var(--navy);
+}
+
+.stats-days {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.day-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 18px;
+  transition: transform 0.1s;
+}
+
+.day-card:active {
+  transform: scale(0.98);
+}
+
+.day-card.grayed-out {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.day-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.day-card-mark.miss {
+  font-size: 14px;
+}
+
+.day-card-mark.excellent {
+  font-size: 13px;
+  color: var(--tile-blue);
+  font-weight: 700;
+}
+
+.day-card-detail {
+  margin-top: 6px;
+}
+
+.day-card-times {
+  font-size: 13px;
+  color: var(--text-mid);
+  font-weight: 500;
+}
+
+.estimated-label {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--coral);
+  background: rgba(255, 180, 162, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.day-card-duration {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* 編集モーダル */
+.edit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(43, 45, 66, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.edit-popup {
+  background: var(--cream);
+  border-radius: 24px;
+  padding: 28px 24px 20px;
+  max-width: 320px;
+  width: 100%;
+  box-shadow: 0 12px 40px rgba(43, 45, 66, 0.2);
+  animation: pop-in 0.3s ease-out;
+}
+
+.edit-popup h2 {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--navy);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.edit-field {
+  margin-bottom: 14px;
+}
+
+.edit-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-mid);
+  margin-bottom: 4px;
+}
+
+.edit-field input[type="time"] {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  font-size: 16px;
+  font-family: inherit;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.edit-save-btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin-top: 18px;
+  border: none;
+  border-radius: var(--r);
+  background: var(--tile-blue);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+
+.edit-cancel-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
 
 /* =================================
    オンボーディング
