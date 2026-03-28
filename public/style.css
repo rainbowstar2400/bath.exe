@@ -593,3 +593,119 @@ header h1 {
 }
 
 .weekly-days li:last-child { border-bottom: none; }
+
+/* =================================
+   オンボーディング
+   ================================= */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(43, 45, 66, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.onboarding-popup {
+  background: var(--cream);
+  border-radius: 24px;
+  padding: 36px 28px 24px;
+  max-width: 340px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(43, 45, 66, 0.2);
+  animation: pop-in 0.3s ease-out;
+}
+
+.onboarding-step h2 {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--navy);
+  margin-bottom: 12px;
+}
+
+.onboarding-step p {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.onboarding-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.onboarding-desc {
+  font-size: 13px !important;
+  color: var(--text-mid) !important;
+}
+
+.onboarding-input {
+  padding: 10px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text);
+  font-size: 18px;
+  font-family: inherit;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.onboarding-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: var(--r);
+  background: var(--tile-blue);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: transform 0.15s;
+}
+
+.onboarding-btn:hover {
+  transform: translateY(-2px);
+}
+
+.onboarding-link {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.onboarding-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.onboarding-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.2s;
+}
+
+.onboarding-dot.active {
+  background: var(--tile-blue);
+}

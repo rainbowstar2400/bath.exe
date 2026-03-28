@@ -13,6 +13,9 @@ async function initApp() {
     console.warn('Supabase未設定: ローカルモードで動作します');
     showMainScreen();
     startClock();
+    if (!localStorage.getItem('onboarding_done')) {
+      showOnboarding();
+    }
     return;
   }
 
@@ -41,6 +44,11 @@ async function initApp() {
   showMainScreen();
   loadChatHistory();
   startClock();
+
+  // 初回起動時はオンボーディングを表示
+  if (!localStorage.getItem('onboarding_done')) {
+    showOnboarding();
+  }
 }
 
 // 認証ヘッダー付きfetch
@@ -434,6 +442,64 @@ async function loadStats() {
 
     listEl.appendChild(li);
   }
+}
+
+// --- オンボーディング ---
+
+let onboardingStep = 1;
+
+function showOnboarding() {
+  onboardingStep = 1;
+  document.getElementById('onboarding-overlay').style.display = 'flex';
+  updateOnboardingStep();
+}
+
+function updateOnboardingStep() {
+  const steps = document.querySelectorAll('.onboarding-step');
+  steps.forEach(s => {
+    s.style.display = s.dataset.step === String(onboardingStep) ? 'block' : 'none';
+  });
+
+  const dots = document.querySelectorAll('.onboarding-dot');
+  dots.forEach((dot, i) => {
+    dot.classList.toggle('active', i < onboardingStep);
+  });
+}
+
+function onboardingNext() {
+  onboardingStep++;
+  updateOnboardingStep();
+}
+
+async function onboardingPermission() {
+  const success = await subscribePush();
+  if (success) {
+    document.getElementById('perm-btn').style.display = 'none';
+  }
+  onboardingNext();
+}
+
+async function onboardingComplete() {
+  // 設定を保存
+  const notifyTime = document.getElementById('ob-notify-time').value;
+  const bathDuration = document.getElementById('ob-bath-duration').value;
+
+  localStorage.setItem('bath_duration', bathDuration);
+  localStorage.setItem('onboarding_done', '1');
+
+  // サーバーに通知時刻を保存
+  if (session) {
+    await apiFetch('/api/settings/update', {
+      method: 'POST',
+      body: JSON.stringify({ notify_time: notifyTime, enabled: true }),
+    });
+  }
+
+  // オーバーレイを閉じる
+  document.getElementById('onboarding-overlay').style.display = 'none';
+
+  // 時計を即時更新
+  updateClock();
 }
 
 // --- 起動 ---

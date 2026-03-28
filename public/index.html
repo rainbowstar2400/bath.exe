@@ -137,6 +137,79 @@
     </div>
   </div>
 
+  <!-- オンボーディング -->
+  <div id="onboarding-overlay" class="onboarding-overlay" style="display:none">
+    <div class="onboarding-popup">
+      <!-- ステップ1: ようこそ -->
+      <div class="onboarding-step" data-step="1">
+        <div class="onboarding-icon">🛁</div>
+        <h2>ようこそ！</h2>
+        <p>Bath.exe は、あなたがお風呂に入るのを<br>後押しするアプリです</p>
+        <button class="onboarding-btn" onclick="onboardingNext()">つぎへ</button>
+      </div>
+
+      <!-- ステップ2: 通知時刻 -->
+      <div class="onboarding-step" data-step="2" style="display:none">
+        <h2>何時にお風呂に入りたい？</h2>
+        <input type="time" id="ob-notify-time" class="onboarding-input" value="23:00">
+        <p class="onboarding-desc">この時間に後押しの通知が届きます！</p>
+        <button class="onboarding-btn" onclick="onboardingNext()">つぎへ</button>
+      </div>
+
+      <!-- ステップ3: お風呂の時間 -->
+      <div class="onboarding-step" data-step="3" style="display:none">
+        <h2>お風呂にかかる時間は<br>どのくらい？</h2>
+        <select id="ob-bath-duration" class="onboarding-input">
+          <option value="5">5分</option>
+          <option value="10">10分</option>
+          <option value="15">15分</option>
+          <option value="20" selected>20分</option>
+          <option value="25">25分</option>
+          <option value="30">30分</option>
+          <option value="35">35分</option>
+          <option value="40">40分</option>
+          <option value="45">45分</option>
+          <option value="50">50分</option>
+          <option value="55">55分</option>
+          <option value="60">60分</option>
+          <option value="65">65分</option>
+          <option value="70">70分</option>
+          <option value="75">75分</option>
+          <option value="80">80分</option>
+          <option value="85">85分</option>
+          <option value="90">90分</option>
+        </select>
+        <p class="onboarding-desc">「今入ったらいつ出れるか」がわかります！</p>
+        <button class="onboarding-btn" onclick="onboardingNext()">つぎへ</button>
+      </div>
+
+      <!-- ステップ4: 通知許可 -->
+      <div class="onboarding-step" data-step="4" style="display:none">
+        <h2>通知を許可してね！</h2>
+        <p class="onboarding-desc">後押しの通知を届けるために必要です</p>
+        <button class="onboarding-btn" onclick="onboardingPermission()">通知を許可する</button>
+        <button class="onboarding-link" onclick="onboardingNext()">あとで</button>
+      </div>
+
+      <!-- ステップ5: 完了 -->
+      <div class="onboarding-step" data-step="5" style="display:none">
+        <div class="onboarding-icon">🎉</div>
+        <h2>準備完了！</h2>
+        <p>言い訳があれば聞きますが、<br>最終的には入ってもらいますよ</p>
+        <button class="onboarding-btn" onclick="onboardingComplete()">はじめる</button>
+      </div>
+
+      <!-- 進行インジケーター -->
+      <div class="onboarding-dots">
+        <span class="onboarding-dot active"></span>
+        <span class="onboarding-dot"></span>
+        <span class="onboarding-dot"></span>
+        <span class="onboarding-dot"></span>
+        <span class="onboarding-dot"></span>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/app.js"></script>
 </body>
