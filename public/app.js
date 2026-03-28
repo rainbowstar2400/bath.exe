@@ -9,6 +9,12 @@ let session = null;
 
 // 初期化
 async function initApp() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn('Supabase未設定: ローカルモードで動作します');
+    showMainScreen();
+    return;
+  }
+
   supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // 既存セッションを確認
@@ -208,7 +214,6 @@ async function bathEnter() {
   bathPhase = 'done';
   btn.classList.add('phase-done');
   document.getElementById('bath-btn-label').textContent = 'はいった！';
-  document.getElementById('bath-btn-sub').textContent = 'お風呂から出たらタップ';
   btn.disabled = false;
 }
 
@@ -233,7 +238,6 @@ async function bathDone() {
   btn.classList.remove('phase-done');
   btn.classList.add('phase-complete');
   document.getElementById('bath-btn-label').textContent = 'おつかれ！';
-  document.getElementById('bath-btn-sub').textContent = 'きょうのお風呂クリア 🎉';
 }
 
 // --- 設定画面 ---
