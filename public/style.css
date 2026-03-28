@@ -152,6 +152,12 @@ header h1 {
   line-height: 1.1;
 }
 
+.clock-sec {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-mid);
+}
+
 .estimate-msg {
   font-size: 13px;
   font-weight: 500;
@@ -402,7 +408,9 @@ header h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 18px 20px;
+  padding: 12px 20px;
+  min-height: 64px;
+  box-sizing: border-box;
   margin-bottom: 10px;
   background: var(--card);
   border: 1px solid var(--border);
@@ -416,7 +424,7 @@ header h1 {
 }
 
 .setting-item input[type="time"] {
-  padding: 8px 14px;
+  padding: 5px 12px;
   border: 1.5px solid var(--border);
   border-radius: 12px;
   background: var(--cream);
@@ -466,7 +474,7 @@ header h1 {
 }
 
 .setting-item select {
-  padding: 8px 14px;
+  padding: 5px 12px;
   border: 1.5px solid var(--border);
   border-radius: 12px;
   background: var(--cream);
@@ -477,12 +485,17 @@ header h1 {
   cursor: pointer;
 }
 
+.setting-item.has-tips label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .setting-tips {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--text-muted);
-  font-weight: 500;
-  padding: 0 4px 8px;
-  margin-top: -4px;
+  font-weight: 400;
+  line-height: 1.2;
 }
 
 .btn-perm {
@@ -510,7 +523,7 @@ header h1 {
   margin: 16px 0;
   border: none;
   border-radius: var(--r);
-  background: var(--navy);
+  background: var(--tile-blue);
   color: #fff;
   font-size: 15px;
   font-weight: 900;

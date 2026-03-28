@@ -84,8 +84,11 @@
         </label>
       </div>
 
-      <div class="setting-item">
-        <label for="bath-duration">お風呂の時間</label>
+      <div class="setting-item has-tips">
+        <label for="bath-duration">
+          お風呂の時間
+          <span class="setting-tips">💡 少し長めに見積もっておくのがおすすめです</span>
+        </label>
         <select id="bath-duration">
           <option value="5">5分</option>
           <option value="10">10分</option>
@@ -107,7 +110,6 @@
           <option value="90">90分</option>
         </select>
       </div>
-      <p class="setting-tips">💡 少し長めに見積もっておくのがおすすめです</p>
 
       <button id="perm-btn" class="btn-perm" onclick="requestPermission()" style="display:none">
         通知を許可する

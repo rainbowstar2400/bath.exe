@@ -108,9 +108,13 @@ function formatTime(date) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
+function formatTimeWithSec(date) {
+  return `${formatTime(date)}<span class="clock-sec">:${String(date.getSeconds()).padStart(2, '0')}</span>`;
+}
+
 function updateClock() {
   const now = new Date();
-  document.getElementById('current-time').textContent = formatTime(now);
+  document.getElementById('current-time').innerHTML = formatTimeWithSec(now);
 
   if (bathPhase === 'enter') {
     const est = new Date(now.getTime() + getBathDuration() * 60 * 1000);
@@ -121,13 +125,7 @@ function updateClock() {
 
 function startClock() {
   updateClock();
-  // 次の分の00秒に合わせてから毎分更新
-  const now = new Date();
-  const msToNextMin = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
-  setTimeout(() => {
-    updateClock();
-    clockInterval = setInterval(updateClock, 60000);
-  }, msToNextMin);
+  clockInterval = setInterval(updateClock, 1000);
 }
 
 // --- 画面制御 ---
@@ -262,6 +260,9 @@ async function bathDone() {
   const btn = document.getElementById('bath-btn');
   btn.disabled = true;
 
+  // 押下時刻を記録（API応答前に取得）
+  const doneTime = new Date();
+
   appendMessage('user', 'はいった！', { action: true });
 
   const data = await apiFetch('/api/bath/done', { method: 'POST' });
@@ -273,8 +274,8 @@ async function bathDone() {
 
   appendMessage('assistant', data.reply, { action: true });
 
-  // 見積もりメッセージを更新
-  document.getElementById('estimate-msg').textContent = `今日は ${formatTime(new Date())} に入れました！`;
+  // 見積もりメッセージを更新（押下時刻を使用）
+  document.getElementById('estimate-msg').textContent = `今日は ${formatTime(doneTime)} に入れました！`;
 
   // 完了状態に
   bathPhase = 'complete';
@@ -320,6 +321,9 @@ async function saveSettings() {
       body: JSON.stringify({ notify_time: notifyTime, enabled }),
     });
   }
+
+  // 見積もりメッセージを即時反映
+  updateClock();
 
   alert('設定を保存しました');
 }
