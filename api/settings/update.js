@@ -12,6 +12,17 @@ module.exports = async function handler(req, res) {
 
   const { notify_time, enabled } = req.body;
 
+  // notify_timeのバリデーション
+  if (notify_time !== undefined) {
+    if (!/^\d{2}:\d{2}$/.test(notify_time)) {
+      return res.status(400).json({ error: '通知時刻の形式が不正です（HH:MM）' });
+    }
+    const [h, m] = notify_time.split(':').map(Number);
+    if (h < 0 || h > 23 || m < 0 || m > 59) {
+      return res.status(400).json({ error: '通知時刻の値が不正です' });
+    }
+  }
+
   // subscriptions テーブルを更新
   const updates = {};
   if (notify_time !== undefined) updates.notify_time = notify_time;

@@ -45,24 +45,33 @@ module.exports = async function handler(req, res) {
     praisePrompt = '遅くなったけどお風呂に入った人を褒めて！「遅くても入っただけ偉い！」のテンションで。2〜3文で。';
   }
 
-  // Claude APIで褒めメッセージを生成
-  const response = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20241022',
-    max_tokens: 200,
-    system: 'あなたは「おふろの妖精」です。フランクで親しみやすい口調で、お風呂に入った人を全力で褒めます。',
-    messages: [{ role: 'user', content: praisePrompt }],
-  });
-
-  const reply = response.content[0].text;
-
-  // 入浴ログを記録
-  await supabaseAdmin
+  // 入浴ログを先に記録（AI応答失敗でも記録は残す）
+  const { error: logError } = await supabaseAdmin
     .from('bath_logs')
     .insert({
       user_id: user.id,
       notify_time: notifyTime,
       praise_level: praiseLevel,
     });
+
+  if (logError) {
+    console.error('入浴ログ記録エラー:', logError.message);
+  }
+
+  // Claude APIで褒めメッセージを生成
+  let reply;
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20241022',
+      max_tokens: 200,
+      system: 'あなたは「おふろの妖精」です。フランクで親しみやすい口調で、お風呂に入った人を全力で褒めます。',
+      messages: [{ role: 'user', content: praisePrompt }],
+    });
+    reply = response.content[0].text;
+  } catch (err) {
+    console.error('Claude API エラー:', err.message);
+    reply = 'おつかれさま！えらい！！🎉';
+  }
 
   return res.status(200).json({ reply, praise_level: praiseLevel });
 };

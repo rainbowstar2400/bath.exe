@@ -1,4 +1,16 @@
 const { supabaseAdmin, getUser } = require('../_lib/supabase');
+const { getSessionDate } = require('../_lib/session');
+
+// 入浴ログのdone_atからセッション日付を算出（正午境界）
+function logToSessionDate(doneAt) {
+  const logDate = new Date(doneAt);
+  const logJst = new Date(logDate.getTime() + 9 * 60 * 60 * 1000);
+  const jstHours = logJst.getUTCHours();
+  if (jstHours < 12) {
+    logJst.setDate(logJst.getDate() - 1);
+  }
+  return logJst.toISOString().split('T')[0];
+}
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -43,11 +55,7 @@ module.exports = async function handler(req, res) {
     // その日は未来か？
     if (dateStr > today) break;
 
-    const log = (logs || []).find(l => {
-      const logDate = new Date(l.done_at);
-      const logJst = new Date(logDate.getTime() + 9 * 60 * 60 * 1000);
-      return logJst.toISOString().split('T')[0] === dateStr;
-    });
+    const log = (logs || []).find(l => logToSessionDate(l.done_at) === dateStr);
 
     days.push({
       date: dateStr,
@@ -75,10 +83,7 @@ module.exports = async function handler(req, res) {
   const checkDate = new Date(jstNow);
   for (let i = 0; i < 90; i++) {
     const dateStr = checkDate.toISOString().split('T')[0];
-    const found = (allLogs || []).some(l => {
-      const logJst = new Date(new Date(l.done_at).getTime() + 9 * 60 * 60 * 1000);
-      return logJst.toISOString().split('T')[0] === dateStr;
-    });
+    const found = (allLogs || []).some(l => logToSessionDate(l.done_at) === dateStr);
     if (found) {
       streak++;
     } else {

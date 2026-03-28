@@ -35,6 +35,11 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'message が必要です' });
   }
 
+  // メッセージ長の制限
+  if (message.length > 500) {
+    return res.status(400).json({ error: 'メッセージが長すぎます（500文字以内）' });
+  }
+
   const session = await getOrCreateSession(user.id);
   const messages = session.messages || [];
 
@@ -51,28 +56,33 @@ module.exports = async function handler(req, res) {
   // ユーザーメッセージを追加
   messages.push({ role: 'user', content: message });
 
-  // Claude APIに送信
-  const response = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20241022',
-    max_tokens: 300,
-    system: SYSTEM_PROMPT,
-    messages,
-  });
+  try {
+    // Claude APIに送信
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20241022',
+      max_tokens: 300,
+      system: SYSTEM_PROMPT,
+      messages,
+    });
 
-  const reply = response.content[0].text;
-  messages.push({ role: 'assistant', content: reply });
+    const reply = response.content[0].text;
+    messages.push({ role: 'assistant', content: reply });
 
-  // セッションを更新
-  const { error: updateError } = await supabaseAdmin
-    .from('chat_sessions')
-    .update({ messages })
-    .eq('id', session.id);
+    // セッションを更新
+    const { error: updateError } = await supabaseAdmin
+      .from('chat_sessions')
+      .update({ messages })
+      .eq('id', session.id);
 
-  if (updateError) {
-    return res.status(500).json({ error: 'セッションの保存に失敗しました' });
+    if (updateError) {
+      return res.status(500).json({ error: 'セッションの保存に失敗しました' });
+    }
+
+    const remaining = MAX_TURNS - (userMessageCount + 1);
+
+    return res.status(200).json({ reply, remaining, limited: false });
+  } catch (err) {
+    console.error('Claude API エラー:', err.message);
+    return res.status(500).json({ error: 'AI応答の生成に失敗しました' });
   }
-
-  const remaining = MAX_TURNS - (userMessageCount + 1);
-
-  return res.status(200).json({ reply, remaining, limited: false });
 };

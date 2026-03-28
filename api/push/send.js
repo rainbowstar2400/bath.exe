@@ -83,7 +83,13 @@ module.exports = async function handler(req, res) {
       });
 
       const text = message.content[0].text;
-      const notification = JSON.parse(text);
+      // Claude APIがマークダウンで囲む場合があるためJSON部分を抽出
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.error('通知文のJSON解析に失敗:', text);
+        continue;
+      }
+      const notification = JSON.parse(jsonMatch[0]);
 
       // バイブレーションパターン（段階に応じて長くする）
       const vibrate = {

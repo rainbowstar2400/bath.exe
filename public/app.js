@@ -45,12 +45,19 @@ async function initApp() {
 
 // 認証ヘッダー付きfetch
 async function apiFetch(path, options = {}) {
+  if (!session) {
+    return { error: 'オンライン機能を使うにはSupabaseの設定が必要です' };
+  }
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${session.access_token}`,
     ...options.headers,
   };
   const res = await fetch(path, { ...options, headers });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    return { error: body.error || `サーバーエラー (${res.status})` };
+  }
   return res.json();
 }
 
@@ -73,13 +80,18 @@ async function subscribePush() {
   });
 
   const subJson = subscription.toJSON();
-  await apiFetch('/api/subscriptions/register', {
+  const result = await apiFetch('/api/subscriptions/register', {
     method: 'POST',
     body: JSON.stringify({
       endpoint: subJson.endpoint,
       keys: subJson.keys,
     }),
   });
+
+  if (result.error) {
+    console.error('サブスク登録エラー:', result.error);
+    return false;
+  }
 
   return true;
 }
@@ -108,13 +120,15 @@ function formatTime(date) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
-function formatTimeWithSec(date) {
-  return `${formatTime(date)}<span class="clock-sec">:${String(date.getSeconds()).padStart(2, '0')}</span>`;
-}
-
 function updateClock() {
   const now = new Date();
-  document.getElementById('current-time').innerHTML = formatTimeWithSec(now);
+  const timeEl = document.getElementById('current-time');
+  timeEl.textContent = '';
+  timeEl.appendChild(document.createTextNode(formatTime(now)));
+  const secSpan = document.createElement('span');
+  secSpan.className = 'clock-sec';
+  secSpan.textContent = `:${String(now.getSeconds()).padStart(2, '0')}`;
+  timeEl.appendChild(secSpan);
 
   if (bathPhase === 'enter') {
     const est = new Date(now.getTime() + getBathDuration() * 60 * 1000);
@@ -124,6 +138,7 @@ function updateClock() {
 }
 
 function startClock() {
+  if (clockInterval) clearInterval(clockInterval);
   updateClock();
   clockInterval = setInterval(updateClock, 1000);
 }
@@ -167,23 +182,30 @@ async function sendMessage() {
   appendMessage('user', message);
   setLoading(true);
 
-  const data = await apiFetch('/api/chat', {
-    method: 'POST',
-    body: JSON.stringify({ message }),
-  });
+  try {
+    const data = await apiFetch('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
 
-  setLoading(false);
+    if (data.error) {
+      appendMessage('assistant', 'エラーが発生しました');
+      return;
+    }
 
-  if (data.error) {
-    appendMessage('assistant', 'エラーが発生しました');
-    return;
-  }
+    appendMessage('assistant', data.reply);
+    if (typeof data.remaining === 'number') {
+      updateRemaining(data.remaining);
+    }
 
-  appendMessage('assistant', data.reply);
-  updateRemaining(data.remaining);
-
-  if (data.limited) {
-    disableChat();
+    if (data.limited) {
+      disableChat();
+    }
+  } catch (err) {
+    console.error('送信エラー:', err);
+    appendMessage('assistant', '通信エラーが発生しました');
+  } finally {
+    setLoading(false);
   }
 }
 
@@ -265,23 +287,30 @@ async function bathDone() {
 
   appendMessage('user', 'はいった！', { action: true });
 
-  const data = await apiFetch('/api/bath/done', { method: 'POST' });
+  try {
+    const data = await apiFetch('/api/bath/done', { method: 'POST' });
 
-  if (data.error) {
-    btn.disabled = false;
-    return;
+    if (data.error) {
+      appendMessage('assistant', 'エラーが発生しました');
+      btn.disabled = false;
+      return;
+    }
+
+    appendMessage('assistant', data.reply, { action: true });
+  } catch (err) {
+    console.error('入浴記録エラー:', err);
+    appendMessage('assistant', 'えらい！おつかれさま！（通信エラーのため記録できませんでした）', { action: true });
   }
-
-  appendMessage('assistant', data.reply, { action: true });
 
   // 見積もりメッセージを更新（押下時刻を使用）
   document.getElementById('estimate-msg').textContent = `今日は ${formatTime(doneTime)} に入れました！`;
 
-  // 完了状態に
+  // 完了状態に（通信失敗でもUI上は完了にする）
   bathPhase = 'complete';
   btn.classList.remove('phase-done');
   btn.classList.add('phase-complete');
   document.getElementById('bath-btn-label').textContent = 'おつかれ！';
+  btn.disabled = true;
 }
 
 // --- 設定画面 ---
@@ -331,10 +360,18 @@ async function saveSettings() {
 // --- 統計画面 ---
 
 async function loadStats() {
-  const data = await apiFetch('/api/stats');
+  let data;
+  try {
+    data = await apiFetch('/api/stats');
+  } catch (err) {
+    console.error('統計取得エラー:', err);
+    data = { error: true };
+  }
 
   if (data.error) {
-    document.getElementById('stats-content').innerHTML = '<p>データの取得に失敗しました</p>';
+    document.getElementById('streak').textContent = '';
+    document.getElementById('weekly-rate').textContent = 'データの取得に失敗しました';
+    document.getElementById('weekly-days').innerHTML = '';
     return;
   }
 

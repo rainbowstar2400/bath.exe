@@ -29,6 +29,8 @@ async function getOrCreateSession(userId) {
     .select()
     .single();
 
+  if (error) throw error;
+
   // upsertがignoreDuplicatesで行を返さない場合、既存を取得
   if (!data) {
     const { data: existing, error: fetchError } = await supabaseAdmin
@@ -42,7 +44,6 @@ async function getOrCreateSession(userId) {
     return existing;
   }
 
-  if (error) throw error;
   return data;
 }
 
