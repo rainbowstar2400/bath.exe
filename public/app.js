@@ -538,7 +538,43 @@ async function loadStats() {
 
       const timeLine = document.createElement('div');
       timeLine.className = 'day-card-times';
-      timeLine.textContent = `入 ${startedTime || '--:--'}　出 ${doneTime || '--:--'}`;
+
+      // 入 バッジ
+      const inBadge = document.createElement('span');
+      inBadge.className = 'time-badge';
+      inBadge.textContent = '入';
+      timeLine.appendChild(inBadge);
+      const inTime = document.createElement('span');
+      inTime.className = 'time-value';
+      inTime.textContent = startedTime || '--:--';
+      timeLine.appendChild(inTime);
+
+      // 出 バッジ
+      const outBadge = document.createElement('span');
+      outBadge.className = 'time-badge';
+      outBadge.textContent = '出';
+      timeLine.appendChild(outBadge);
+      const outTime = document.createElement('span');
+      outTime.className = 'time-value';
+      outTime.textContent = doneTime || '--:--';
+      timeLine.appendChild(outTime);
+
+      // かかった時間
+      if (day.started_at && (day.done_at || isEstimated)) {
+        const start = new Date(day.started_at);
+        const end = day.done_at
+          ? new Date(day.done_at)
+          : new Date(start.getTime() + bathDuration * 60 * 1000);
+        const mins = Math.round((end - start) / 60000);
+        const durationSpan = document.createElement('span');
+        durationSpan.className = 'day-card-duration';
+        durationSpan.textContent = `かかった時間：${mins}分`;
+        if (isEstimated) {
+          durationSpan.textContent += '（推測）';
+        }
+        timeLine.appendChild(durationSpan);
+      }
+
       if (isEstimated) {
         const estLabel = document.createElement('span');
         estLabel.className = 'estimated-label';
@@ -546,22 +582,6 @@ async function loadStats() {
         timeLine.appendChild(estLabel);
       }
       detail.appendChild(timeLine);
-
-      // 所要時間
-      if (day.started_at && (day.done_at || isEstimated)) {
-        const start = new Date(day.started_at);
-        const end = day.done_at
-          ? new Date(day.done_at)
-          : new Date(start.getTime() + bathDuration * 60 * 1000);
-        const mins = Math.round((end - start) / 60000);
-        const durationLine = document.createElement('div');
-        durationLine.className = 'day-card-duration';
-        durationLine.textContent = `所要 ${mins}分`;
-        if (isEstimated) {
-          durationLine.textContent += '（推測値）';
-        }
-        detail.appendChild(durationLine);
-      }
 
       card.appendChild(detail);
     }
