@@ -1,24 +1,37 @@
 const { supabaseAdmin } = require('./supabase');
 
-// 正午（12:00 JST）を日付の境界としたセッション日付を取得
-function getSessionDate() {
+// 境界時刻に基づいたセッション日付を取得
+// bathTimeType: 'night'（境界=正午12:00）, 'morning'（境界=早朝4:00）
+function getSessionDate(bathTimeType = 'night') {
+  const boundary = bathTimeType === 'morning' ? 4 : 12;
   const now = new Date();
   // JST（UTC+9）での現在時刻を計算
   const jstHours = (now.getUTCHours() + 9) % 24;
   const jstDate = new Date(now.getTime() + 9 * 60 * 60 * 1000);
 
-  // 正午より前なら前日をセッション日付とする
-  if (jstHours < 12) {
+  // 境界時刻より前なら前日をセッション日付とする
+  if (jstHours < boundary) {
     jstDate.setDate(jstDate.getDate() - 1);
   }
 
   return jstDate.toISOString().split('T')[0];
 }
 
+// ユーザーのbath_time_type設定を取得
+async function getBathTimeType(userId) {
+  const { data } = await supabaseAdmin
+    .from('subscriptions')
+    .select('bath_time_type')
+    .eq('user_id', userId)
+    .single();
+  return (data && data.bath_time_type) || 'night';
+}
+
 // 当日のセッションを取得（なければ新規作成）
 // upsertで競合を防ぐ
 async function getOrCreateSession(userId) {
-  const sessionDate = getSessionDate();
+  const bathTimeType = await getBathTimeType(userId);
+  const sessionDate = getSessionDate(bathTimeType);
 
   // まず既存セッションを取得
   const { data: existing } = await supabaseAdmin
@@ -55,4 +68,4 @@ async function getOrCreateSession(userId) {
   return data;
 }
 
-module.exports = { getSessionDate, getOrCreateSession };
+module.exports = { getSessionDate, getOrCreateSession, getBathTimeType };

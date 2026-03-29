@@ -111,6 +111,17 @@
         </select>
       </div>
 
+      <div class="setting-item has-tips">
+        <label for="bath-time-type">
+          お風呂のタイミング
+          <span class="setting-tips" id="bath-time-type-tips">💡 深夜0時を過ぎても<br>正午までの入浴は前日の記録になります</span>
+        </label>
+        <select id="bath-time-type">
+          <option value="night" selected>夜風呂派</option>
+          <option value="morning">朝風呂派</option>
+        </select>
+      </div>
+
       <button id="perm-btn" class="btn-perm" onclick="requestPermission()" style="display:none">
         通知を許可する
       </button>

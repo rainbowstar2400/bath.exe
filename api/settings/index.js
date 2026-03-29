@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
 
   const { data, error } = await supabaseAdmin
     .from('subscriptions')
-    .select('notify_time, enabled')
+    .select('notify_time, enabled, bath_time_type')
     .eq('user_id', user.id)
     .single();
 
@@ -24,5 +24,6 @@ module.exports = async function handler(req, res) {
   return res.status(200).json({
     notify_time: data.notify_time || '23:00',
     enabled: data.enabled !== false,
+    bath_time_type: data.bath_time_type || 'night',
   });
 };

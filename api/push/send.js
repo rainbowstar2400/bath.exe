@@ -34,9 +34,7 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'stage は 1〜3 を指定してください' });
   }
 
-  const sessionDate = getSessionDate();
-
-  // 通知が有効かつ、該当時刻のユーザーを取得
+  // 通知が有効かつ、該当時刻のユー���ーを取得
   // pg_cronは段階ごとに固定時刻で呼ぶため、notify_timeで絞り込む
   const now = new Date();
   const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
@@ -58,18 +56,20 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: error.message });
   }
 
-  // 当日の入浴ログを取得
-  const { data: todayLogs } = await supabaseAdmin
-    .from('bath_logs')
-    .select('user_id')
-    .gte('done_at', `${sessionDate}T03:00:00+00:00`);
-
-  const doneUserIds = new Set((todayLogs || []).map(l => l.user_id));
-
   let sent = 0;
   for (const sub of subscriptions) {
+    // ユーザーの設定に基づいたセッション日付で入浴済みチェック
+    const sessionDate = getSessionDate(sub.bath_time_type || 'night');
+    const { data: todayLog } = await supabaseAdmin
+      .from('bath_logs')
+      .select('id')
+      .eq('user_id', sub.user_id)
+      .eq('session_date', sessionDate)
+      .not('done_at', 'is', null)
+      .single();
+
     // 既に入浴済みならスキップ
-    if (doneUserIds.has(sub.user_id)) continue;
+    if (todayLog) continue;
 
     try {
       // Claude APIで通知文を動的生成

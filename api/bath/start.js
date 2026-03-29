@@ -1,5 +1,5 @@
 const { supabaseAdmin, getUser } = require('../_lib/supabase');
-const { getSessionDate } = require('../_lib/session');
+const { getSessionDate, getBathTimeType } = require('../_lib/session');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -11,7 +11,15 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ error: '認証が必要です' });
   }
 
-  const sessionDate = getSessionDate();
+  // ユーザーの通知設定を取得
+  const { data: sub } = await supabaseAdmin
+    .from('subscriptions')
+    .select('notify_time, bath_time_type')
+    .eq('user_id', user.id)
+    .single();
+
+  const bathTimeType = sub?.bath_time_type || 'night';
+  const sessionDate = getSessionDate(bathTimeType);
 
   // 当日のレコードが既にあるかチェック
   const { data: existing } = await supabaseAdmin
@@ -24,13 +32,6 @@ module.exports = async function handler(req, res) {
   if (existing) {
     return res.status(409).json({ error: '本日は既に記録があります', log_id: existing.id });
   }
-
-  // ユーザーの通知設定を取得
-  const { data: sub } = await supabaseAdmin
-    .from('subscriptions')
-    .select('notify_time')
-    .eq('user_id', user.id)
-    .single();
 
   const notifyTime = sub?.notify_time || '23:00';
 

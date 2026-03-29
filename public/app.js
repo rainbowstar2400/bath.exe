@@ -390,15 +390,36 @@ async function loadSettings() {
   // お風呂の時間をlocalStorageから読み込み
   document.getElementById('bath-duration').value = getBathDuration();
 
+  // お風呂のタイミングをlocalStorageから読み込み
+  const bathTimeType = localStorage.getItem('bath_time_type') || 'night';
+  const bathTimeTypeSelect = document.getElementById('bath-time-type');
+  bathTimeTypeSelect.value = bathTimeType;
+  updateBathTimeTypeTips(bathTimeType);
+  bathTimeTypeSelect.onchange = () => updateBathTimeTypeTips(bathTimeTypeSelect.value);
+
   // サーバーから通知設定を取得
   try {
     const data = await apiFetch('/api/settings');
     if (!data.error) {
       document.getElementById('notify-time').value = data.notify_time;
       document.getElementById('notify-toggle').checked = data.enabled;
+      if (data.bath_time_type) {
+        document.getElementById('bath-time-type').value = data.bath_time_type;
+        localStorage.setItem('bath_time_type', data.bath_time_type);
+        updateBathTimeTypeTips(data.bath_time_type);
+      }
     }
   } catch (err) {
     console.error('設定の取得に失敗:', err);
+  }
+}
+
+function updateBathTimeTypeTips(type) {
+  const tips = document.getElementById('bath-time-type-tips');
+  if (type === 'morning') {
+    tips.textContent = '💡 朝4時以降の入浴はその日の記録になります';
+  } else {
+    tips.innerHTML = '💡 深夜0時を過ぎても<br>正午までの入浴は前日の記録になります';
   }
 }
 
@@ -414,14 +435,16 @@ async function saveSettings() {
   const notifyTime = document.getElementById('notify-time').value;
   const enabled = document.getElementById('notify-toggle').checked;
   const bathDuration = document.getElementById('bath-duration').value;
+  const bathTimeType = document.getElementById('bath-time-type').value;
 
-  // お風呂の時間をlocalStorageに保存
+  // ローカル設定を保存
   localStorage.setItem('bath_duration', bathDuration);
+  localStorage.setItem('bath_time_type', bathTimeType);
 
   if (session) {
     const result = await apiFetch('/api/settings/update', {
       method: 'POST',
-      body: JSON.stringify({ notify_time: notifyTime, enabled }),
+      body: JSON.stringify({ notify_time: notifyTime, enabled, bath_time_type: bathTimeType }),
     });
     if (result.error) {
       alert('設定の保存に失敗しました: ' + result.error);
@@ -522,17 +545,17 @@ async function loadStats() {
       const detail = document.createElement('div');
       detail.className = 'day-card-detail';
 
-      const startedTime = formatJstTime(day.started_at);
+      const startedTime = formatJstTime(day.started_at, day.date);
       const bathDuration = getBathDuration();
 
       // done_atがない場合は推測値を計算
       let doneTime;
       let isEstimated = false;
       if (day.done_at) {
-        doneTime = formatJstTime(day.done_at);
+        doneTime = formatJstTime(day.done_at, day.date);
       } else if (day.started_at) {
         const est = new Date(new Date(day.started_at).getTime() + bathDuration * 60 * 1000);
-        doneTime = formatJstTime(est.toISOString());
+        doneTime = formatJstTime(est.toISOString(), day.date);
         isEstimated = true;
       }
 
@@ -594,11 +617,19 @@ async function loadStats() {
 }
 
 // タイムスタンプをJSTのHH:MM形式に変換
-function formatJstTime(isoString) {
+// sessionDateを渡すと、翌日にまたがる場合に「（翌）」を付与
+function formatJstTime(isoString, sessionDate) {
   if (!isoString) return null;
   const d = new Date(isoString);
   const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  return `${String(jst.getUTCHours()).padStart(2, '0')}:${String(jst.getUTCMinutes()).padStart(2, '0')}`;
+  const timeStr = `${String(jst.getUTCHours()).padStart(2, '0')}:${String(jst.getUTCMinutes()).padStart(2, '0')}`;
+  if (sessionDate) {
+    const jstDateStr = jst.toISOString().split('T')[0];
+    if (jstDateStr !== sessionDate) {
+      return `（翌）${timeStr}`;
+    }
+  }
+  return timeStr;
 }
 
 // --- 編集モーダル ---
@@ -637,11 +668,13 @@ async function saveEdit() {
   const doneTime = document.getElementById('edit-done').value;
 
   // 時刻をISO文字列に変換
-  // セッション日の正午境界: 0:00〜11:59の時刻は翌日の日付に属する
+  // 境界時刻より前の時刻は翌日の日付に属する
+  const bathTimeType = localStorage.getItem('bath_time_type') || 'night';
+  const boundary = bathTimeType === 'morning' ? 4 : 12;
   function timeToIso(sessionDate, timeStr) {
     if (!timeStr) return null;
     const [h] = timeStr.split(':').map(Number);
-    if (h < 12) {
+    if (h < boundary) {
       // 翌日の日付を算出（toISOStringはUTCに戻るため文字列操作で算出）
       const d = new Date(sessionDate + 'T12:00:00+09:00');
       d.setDate(d.getDate() + 1);

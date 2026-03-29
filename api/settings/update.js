@@ -10,7 +10,7 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ error: '認証が必要です' });
   }
 
-  const { notify_time, enabled } = req.body;
+  const { notify_time, enabled, bath_time_type } = req.body;
 
   // notify_timeのバリデーション
   if (notify_time !== undefined) {
@@ -23,10 +23,16 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  // bath_time_typeのバリデーション
+  if (bath_time_type !== undefined && !['night', 'morning'].includes(bath_time_type)) {
+    return res.status(400).json({ error: 'お風呂のタイミングの値が不正です' });
+  }
+
   // subscriptions テーブルを更新（通知許可済みユーザーのみ行が存在する）
   const updates = {};
   if (notify_time !== undefined) updates.notify_time = notify_time;
   if (enabled !== undefined) updates.enabled = enabled;
+  if (bath_time_type !== undefined) updates.bath_time_type = bath_time_type;
   updates.updated_at = new Date().toISOString();
 
   const { data: updated, error } = await supabaseAdmin

@@ -1,4 +1,5 @@
 const { supabaseAdmin, getUser } = require('../_lib/supabase');
+const { getSessionDate, getBathTimeType } = require('../_lib/session');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -10,12 +11,12 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ error: '認証が必要です' });
   }
 
-  const now = new Date();
-  const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const today = jstNow.toISOString().split('T')[0];
+  const bathTimeType = await getBathTimeType(user.id);
+  const today = getSessionDate(bathTimeType);
 
   // 7日前の日付を算出
-  const weekAgo = new Date(jstNow);
+  const todayDate = new Date(today + 'T12:00:00+09:00');
+  const weekAgo = new Date(todayDate);
   weekAgo.setDate(weekAgo.getDate() - 6);
   const weekStart = weekAgo.toISOString().split('T')[0];
 
@@ -38,7 +39,7 @@ module.exports = async function handler(req, res) {
   // 日別データを組み立て（今日から7日前まで、新しい順）
   const days = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date(jstNow);
+    const d = new Date(todayDate);
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split('T')[0];
 
@@ -69,7 +70,7 @@ module.exports = async function handler(req, res) {
 
   const logDates = new Set((allLogs || []).map(l => l.session_date));
   let streak = 0;
-  const checkDate = new Date(jstNow);
+  const checkDate = new Date(todayDate);
   for (let i = 0; i < 90; i++) {
     const dateStr = checkDate.toISOString().split('T')[0];
     if (logDates.has(dateStr)) {
