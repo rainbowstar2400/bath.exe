@@ -48,6 +48,13 @@ async function initApp() {
     session = data.session;
   }
 
+  // トークン自動更新（長時間利用時の401を防止）
+  supabaseClient.auth.onAuthStateChange((event, newSession) => {
+    if (newSession) {
+      session = newSession;
+    }
+  });
+
   // Service Worker登録
   if ('serviceWorker' in navigator) {
     await navigator.serviceWorker.register('/sw.js');
@@ -102,11 +109,16 @@ async function subscribePush() {
     });
 
     const subJson = subscription.toJSON();
+    // localStorageの設定値も一緒に送る（通知未許可→後で許可のフローで設定が反映されるように）
+    const notifyTime = localStorage.getItem('notify_time') || document.getElementById('notify-time')?.value || '23:00';
+    const bathTimeType = localStorage.getItem('bath_time_type') || 'night';
     const result = await apiFetch('/api/subscriptions/register', {
       method: 'POST',
       body: JSON.stringify({
         endpoint: subJson.endpoint,
         keys: subJson.keys,
+        notify_time: notifyTime,
+        bath_time_type: bathTimeType,
       }),
     });
 
@@ -438,6 +450,7 @@ async function saveSettings() {
   const bathTimeType = document.getElementById('bath-time-type').value;
 
   // ローカル設定を保存
+  localStorage.setItem('notify_time', notifyTime);
   localStorage.setItem('bath_duration', bathDuration);
   localStorage.setItem('bath_time_type', bathTimeType);
 
@@ -752,6 +765,7 @@ async function onboardingComplete() {
   const notifyTime = document.getElementById('ob-notify-time').value;
   const bathDuration = document.getElementById('ob-bath-duration').value;
 
+  localStorage.setItem('notify_time', notifyTime);
   localStorage.setItem('bath_duration', bathDuration);
   localStorage.setItem('onboarding_done', '1');
 

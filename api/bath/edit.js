@@ -25,6 +25,20 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: '未来の日付には記録できません' });
   }
 
+  // 時刻のバリデーション（ISO 8601形式かつ有効な日時か）
+  const isoRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/;
+  if (started_at && (!isoRegex.test(started_at) || isNaN(new Date(started_at).getTime()))) {
+    return res.status(400).json({ error: '入浴開始時刻の形式が不正です' });
+  }
+  if (done_at && (!isoRegex.test(done_at) || isNaN(new Date(done_at).getTime()))) {
+    return res.status(400).json({ error: '入浴終了時刻の形式が不正です' });
+  }
+
+  // 前後関係の検証（started_at < done_at）
+  if (started_at && done_at && new Date(started_at) >= new Date(done_at)) {
+    return res.status(400).json({ error: '入浴開始時刻は終了時刻より前にしてください' });
+  }
+
   // ユーザーの通知設定を取得（praise_level計算用）
   const { data: sub } = await supabaseAdmin
     .from('subscriptions')

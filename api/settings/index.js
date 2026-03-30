@@ -17,8 +17,13 @@ module.exports = async function handler(req, res) {
     .single();
 
   if (error) {
-    // レコードが無い場合はデフォルト値を返す
-    return res.status(200).json({ notify_time: '23:00', enabled: true });
+    // PGRST116 = 0行ヒット（レコード未作成）→ デフォルト値を返す
+    if (error.code === 'PGRST116') {
+      return res.status(200).json({ notify_time: '23:00', enabled: true, bath_time_type: 'night' });
+    }
+    // それ以外は実障害
+    console.error('設定取得エラー:', error.message);
+    return res.status(500).json({ error: '設定の取得に失敗しました' });
   }
 
   return res.status(200).json({
