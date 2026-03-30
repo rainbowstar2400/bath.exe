@@ -64,7 +64,7 @@ module.exports = async function handler(req, res) {
   let reply;
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20241022',
+      model: 'claude-haiku-4-5',
       max_tokens: 200,
       system: 'あなたは「おふろの妖精」です。フランクで親しみやすい口調で、お風呂に入った人を全力で褒めます。',
       messages: [{ role: 'user', content: praisePrompt }],

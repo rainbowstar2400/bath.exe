@@ -74,7 +74,7 @@ module.exports = async function handler(req, res) {
     try {
       // Claude APIで通知文を動的生成
       const message = await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20241022',
+        model: 'claude-haiku-4-5',
         max_tokens: 150,
         messages: [{
           role: 'user',

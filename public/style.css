@@ -8,6 +8,34 @@
   box-sizing: border-box;
 }
 
+/* 初期ローディング */
+.app-loading {
+  position: fixed;
+  inset: 0;
+  background: var(--cream, #fff8f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.app-loading.hidden {
+  display: none;
+}
+
+.app-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border, rgba(0,0,0,0.05));
+  border-top-color: var(--tile-blue, #89c2d9);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 :root {
   --peach: #ffb4a2;
   --coral: #e5989b;

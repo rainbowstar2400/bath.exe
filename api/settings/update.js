@@ -10,10 +10,11 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ error: '認証が必要です' });
   }
 
-  const { notify_time, enabled, bath_time_type } = req.body;
+  let { notify_time, enabled, bath_time_type } = req.body;
 
-  // notify_timeのバリデーション
+  // notify_timeのバリデーション（iOSはHH:MM:SS形式を返すことがあるため秒を切り捨て）
   if (notify_time !== undefined) {
+    notify_time = notify_time.slice(0, 5);
     if (!/^\d{2}:\d{2}$/.test(notify_time)) {
       return res.status(400).json({ error: '通知時刻の形式が不正です（HH:MM）' });
     }

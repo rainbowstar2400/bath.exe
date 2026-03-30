@@ -24,6 +24,7 @@ async function initApp() {
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.warn('Supabase未設定: ローカルモードで動作します');
+    hideAppLoading();
     showMainScreen();
     startClock();
     if (!localStorage.getItem('onboarding_done')) {
@@ -61,6 +62,7 @@ async function initApp() {
   }
 
   // 画面初期化
+  hideAppLoading();
   showMainScreen();
   loadChatHistory();
   startClock();
@@ -69,6 +71,11 @@ async function initApp() {
   if (!localStorage.getItem('onboarding_done')) {
     showOnboarding();
   }
+}
+
+function hideAppLoading() {
+  const el = document.getElementById('app-loading');
+  if (el) el.classList.add('hidden');
 }
 
 // 認証ヘッダー付きfetch
