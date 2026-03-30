@@ -29,69 +29,67 @@
 | 通知オフ時 | `enabled` フラグで管理（レコードは削除しない） |
 | 「入った！」ボタン | 残り通知をキャンセルし、褒めメッセージを表示 |
 | 褒め方 | 早い時間 → 激褒め、遅い時間でも「入っただけ偉い！」 |
-| セッションリセット | 毎日12:00（正午）に新セッション開始 |
+| セッションリセット | 境界時刻でリセット（夜風呂派:正午、朝風呂派:早朝4時） |
 | 通知時刻変更 | 設定変更時にAPIでpg_cronジョブも更新 |
 
 ---
 
-## Phase 1: 環境セットアップ
+## Phase 1: 環境セットアップ ✅
 
-- [ ] Supabase プロジェクト新規作成
-- [ ] Vercel プロジェクト作成・GitHub リポジトリ連携
-- [ ] VAPID 鍵ペア生成
-- [ ] 環境変数設定（Vercel・Supabase 両方）
-
----
-
-## Phase 2: DB スキーマ構築
-
-- [ ] `subscriptions` テーブル作成
-- [ ] `chat_sessions` テーブル作成
-- [ ] `pg_net` / `pg_cron` 拡張を有効化
-- [ ] pg_cron ジョブ登録（23:00・23:15・23:30）
-
-### subscriptions テーブル（案）
-
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | uuid | PK |
-| user_id | uuid | Supabase 匿名認証のユーザーID |
-| endpoint | text | プッシュエンドポイント |
-| auth | text | VAPID auth キー |
-| p256dh | text | VAPID p256dh キー |
-| notify_time | time | 通知開始時刻（デフォルト 23:00） |
-| enabled | boolean | 通知オンオフ |
-| created_at | timestamptz | 作成日時 |
-
-### chat_sessions テーブル（案）
-
-| カラム | 型 | 説明 |
-|---|---|---|
-| id | uuid | PK |
-| user_id | uuid | Supabase 匿名認証のユーザーID |
-| messages | jsonb | 会話履歴（Claude API 形式） |
-| date | date | セッションの日付（毎日12:00リセット） |
-| created_at | timestamptz | 作成日時 |
+- [x] Supabase プロジェクト新規作成
+- [x] Vercel プロジェクト作成・GitHub リポジトリ連携
+- [x] VAPID 鍵ペア生成
+- [x] 環境変数設定（Vercel・Supabase 両方）
 
 ---
 
-## Phase 3: バックエンド API（Vercel サーバーレス関数）
+## Phase 2: DB スキーマ構築 ✅
 
-- [ ] `POST /api/subscriptions/register` — サブスク登録・更新
-- [ ] `POST /api/push/send` — プッシュ通知送信（pg_cron から叩かれる）
-- [ ] `POST /api/chat` — Claude API とのやり取り
-- [ ] `POST /api/bath/done` — 「入った！」処理・残り通知キャンセル・褒めメッセージ生成
-- [ ] `POST /api/settings/update` — 通知時刻変更・pg_cron ジョブ更新
+- [x] `subscriptions` テーブル作成
+- [x] `chat_sessions` テーブル作成
+- [x] `bath_logs` テーブル作成（`session_date`, `started_at`, `done_at`, `is_manual` 等）
+- [x] `pg_net` / `pg_cron` 拡張を有効化
+- [x] pg_cron ジョブ登録（23:00・23:15・23:30）
+- [x] `subscriptions` に `bath_time_type` カラム追加（朝風呂派/夜風呂派）
+
+### subscriptions テーブル
+
+最新のスキーマは仕様書 5.1 を参照。
+
+### chat_sessions テーブル
+
+最新のスキーマは仕様書 5.2 を参照。
+
+### bath_logs テーブル
+
+最新のスキーマは仕様書 5.3 を参照。
 
 ---
 
-## Phase 4: フロントエンド（PWA）
+## Phase 3: バックエンド API（Vercel サーバーレス関数） ✅
+
+- [x] `POST /api/subscriptions/register` — サブスク登録・更新（notify_time/bath_time_type も送信可）
+- [x] `POST /api/push/send` — プッシュ通知送信（pg_cron から叩かれる）
+- [x] `POST /api/chat` — Claude API とのやり取り（セッション管理・上限制御付き）
+- [x] `POST /api/bath/start` — 「今はいる！」処理・入浴開始記録
+- [x] `POST /api/bath/done` — 「はいった！」処理・褒めメッセージ生成
+- [x] `POST /api/bath/edit` — 入浴記録の手動編集・追加（バリデーション付き）
+- [x] `GET /api/stats` — 記録画面用データ取得（スライディング7日間）
+- [x] `POST /api/settings/update` — 通知設定・bath_time_type 更新
+- [x] `GET /api/settings` — 通知設定取得（エラーコード区別対応済み）
+- [x] `GET /api/config` — フロントへ公開設定配信
+
+---
+
+## Phase 4: フロントエンド（PWA） ✅
 
 - [x] `manifest.json` + アイコン
 - [x] Service Worker（プッシュ受信・通知表示・キャッシュ）
 - [x] 初回起動オンボーディング（5ステップポップアップ：ようこそ → 通知時刻 → お風呂の時間 → 通知許可 → 完了）
 - [x] メイン画面（チャット・2段階入浴ボタン）
-- [x] 設定画面（通知時刻・オンオフ・お風呂の時間）
+- [x] 設定画面（通知時刻・オンオフ・お風呂の時間・お風呂のタイミング）
+- [x] 認証トークン自動更新（onAuthStateChange）
+- [x] 公開設定のAPI経由取得（/api/config）
 
 ---
 
@@ -106,25 +104,44 @@
 
 ---
 
-## Phase 4.6: チャット履歴と設定の永続化
+## Phase 4.6: チャット履歴と設定の永続化 ✅
 
-- [ ] リロード時にサーバーからチャット履歴を読み込み表示
-- [ ] 設定画面で保存済みの通知時刻・ON/OFFをサーバーから取得して表示（`GET /api/settings` 新設）
+- [x] リロード時にサーバーからチャット履歴を読み込み表示
+- [x] 設定画面で保存済みの通知時刻・ON/OFFをサーバーから取得して表示（`GET /api/settings`）
+
+---
+
+## Phase 4.7: 記録画面 ✅
+
+- [x] カード型UIで過去7日分の入浴記録を表示（スライディングウィンドウ）
+- [x] 入/出バッジ（青/コーラル色分け）+ かかった時間表示
+- [x] 入浴開始記録（`started_at`）対応
+- [x] 推測値表示（`done_at` がない場合は設定の所要時間から推測）
+- [x] 記録の手動編集・追加モーダル
+- [x] 翌日またぎの `（翌）` 表示
+- [x] 連続記録（streak）表示
+
+## Phase 4.8: 朝風呂派/夜風呂派設定 ✅
+
+- [x] 設定画面にセレクト + 動的Tips追加
+- [x] セッション日付境界をユーザー設定に応じて切替（夜風呂派=12:00、朝風呂派=4:00）
+- [x] 全APIエンドポイントで設定を反映（start, done, stats, chat, push）
 
 ---
 
 ## Phase 5: 結合・動作確認
 
+- [x] チャットフロー確認
 - [ ] 通知の手動テスト（時刻を早めて確認）
-- [ ] チャットフロー確認
 - [ ] 「入った！」で残り通知がキャンセルされるか確認
 - [ ] 設定変更 → pg_cron 更新の確認
+- [ ] 記録画面の実データ確認
 
 ---
 
 ## Phase 6: デプロイ・仕上げ
 
-- [ ] Vercel にデプロイ
+- [x] Vercel にデプロイ
 - [ ] HTTPS で PWA インストール確認
 - [ ] 実機でプッシュ通知確認
 - [ ] Supabase CDN をバージョン固定し SRI ハッシュを付与
