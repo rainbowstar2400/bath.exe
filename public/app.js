@@ -65,6 +65,7 @@ async function initApp() {
   hideAppLoading();
   showMainScreen();
   loadChatHistory();
+  restoreBathPhase();
   startClock();
 
   // 初回起動時はオンボーディングを表示
@@ -244,6 +245,9 @@ async function sendMessage() {
   appendMessage('user', message);
   setLoading(true);
 
+  // AI応答待ちのローディング吹き出しを表示
+  const loadingBubble = appendLoadingBubble();
+
   let chatLimited = false;
   try {
     const data = await apiFetch('/api/chat', {
@@ -252,11 +256,11 @@ async function sendMessage() {
     });
 
     if (data.error) {
-      appendMessage('assistant', 'エラーが発生しました');
+      replaceLoadingBubble(loadingBubble, 'エラーが発生しました');
       return;
     }
 
-    appendMessage('assistant', data.reply);
+    replaceLoadingBubble(loadingBubble, data.reply);
     if (typeof data.remaining === 'number') {
       updateRemaining(data.remaining);
     }
@@ -267,7 +271,7 @@ async function sendMessage() {
     }
   } catch (err) {
     console.error('送信エラー:', err);
-    appendMessage('assistant', '通信エラーが発生しました');
+    replaceLoadingBubble(loadingBubble, '通信エラーが発生しました');
   } finally {
     if (!chatLimited) setLoading(false);
   }
@@ -302,6 +306,34 @@ function updateRemaining(count) {
 function disableChat() {
   document.getElementById('message-input').disabled = true;
   document.getElementById('send-btn').disabled = true;
+}
+
+function appendLoadingBubble() {
+  const chatArea = document.getElementById('chat-area');
+  const wrap = document.createElement('div');
+  wrap.className = 'message-wrap assistant';
+
+  const div = document.createElement('div');
+  div.className = 'message assistant loading';
+  div.innerHTML = '<span class="dot-typing"></span>';
+  wrap.appendChild(div);
+
+  chatArea.appendChild(wrap);
+  chatArea.scrollTop = chatArea.scrollHeight;
+  return wrap;
+}
+
+function replaceLoadingBubble(wrap, text) {
+  const div = wrap.querySelector('.message');
+  div.classList.remove('loading');
+  div.textContent = text;
+
+  // 時刻表示を追加
+  const time = document.createElement('span');
+  time.className = 'message-time';
+  const now = new Date();
+  time.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  wrap.appendChild(time);
 }
 
 function setLoading(loading) {
@@ -395,6 +427,37 @@ async function bathDone() {
   btn.disabled = true;
 }
 
+// 入浴状態をサーバーから復元
+async function restoreBathPhase() {
+  try {
+    const data = await apiFetch('/api/bath/status');
+    const btn = document.getElementById('bath-btn');
+
+    if (data.phase === 'done') {
+      // 進行中の入浴がある → 「はいった！」ボタンに切り替え
+      bathPhase = 'done';
+      btn.classList.add('phase-done');
+      document.getElementById('bath-btn-label').textContent = 'はいった！';
+
+      // 見積もりを計算して表示
+      const startedAt = new Date(data.started_at);
+      const est = new Date(startedAt.getTime() + getBathDuration() * 60 * 1000);
+      document.getElementById('estimate-msg').textContent = `${formatTime(est)} くらいには出れるね！`;
+    } else if (data.phase === 'complete') {
+      // 今日は入浴済み → 完了状態に
+      bathPhase = 'complete';
+      btn.classList.add('phase-complete');
+      document.getElementById('bath-btn-label').textContent = 'おつかれ！';
+      btn.disabled = true;
+
+      const doneAt = new Date(data.done_at);
+      document.getElementById('estimate-msg').textContent = `今日は ${formatTime(doneAt)} に入れました！`;
+    }
+  } catch (err) {
+    console.error('入浴状態の復元に失敗:', err);
+  }
+}
+
 // --- 設定画面 ---
 
 async function loadSettings() {
@@ -409,6 +472,12 @@ async function loadSettings() {
   // お風呂の時間をlocalStorageから読み込み
   document.getElementById('bath-duration').value = getBathDuration();
 
+  // 通知時刻をlocalStorageから先読み（サーバー応答前のフラッシュ防止）
+  const savedNotifyTime = localStorage.getItem('notify_time');
+  if (savedNotifyTime) {
+    document.getElementById('notify-time').value = savedNotifyTime;
+  }
+
   // お風呂のタイミングをlocalStorageから読み込み
   const bathTimeType = localStorage.getItem('bath_time_type') || 'night';
   const bathTimeTypeSelect = document.getElementById('bath-time-type');
@@ -416,11 +485,12 @@ async function loadSettings() {
   updateBathTimeTypeTips(bathTimeType);
   bathTimeTypeSelect.onchange = () => updateBathTimeTypeTips(bathTimeTypeSelect.value);
 
-  // サーバーから通知設定を取得
+  // サーバーから通知設定を取得（localStorageも同期）
   try {
     const data = await apiFetch('/api/settings');
     if (!data.error) {
       document.getElementById('notify-time').value = data.notify_time;
+      localStorage.setItem('notify_time', data.notify_time);
       document.getElementById('notify-toggle').checked = data.enabled;
       if (data.bath_time_type) {
         document.getElementById('bath-time-type').value = data.bath_time_type;
@@ -451,6 +521,11 @@ async function requestPermission() {
 }
 
 async function saveSettings() {
+  const saveBtn = document.querySelector('.btn-save');
+  const originalText = saveBtn.textContent;
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<span class="btn-spinner"></span>';
+
   const notifyTime = document.getElementById('notify-time').value;
   const enabled = document.getElementById('notify-toggle').checked;
   const bathDuration = document.getElementById('bath-duration').value;
@@ -461,21 +536,26 @@ async function saveSettings() {
   localStorage.setItem('bath_duration', bathDuration);
   localStorage.setItem('bath_time_type', bathTimeType);
 
-  if (session) {
-    const result = await apiFetch('/api/settings/update', {
-      method: 'POST',
-      body: JSON.stringify({ notify_time: notifyTime, enabled, bath_time_type: bathTimeType }),
-    });
-    if (result.error) {
-      alert('設定の保存に失敗しました: ' + result.error);
-      return;
+  try {
+    if (session) {
+      const result = await apiFetch('/api/settings/update', {
+        method: 'POST',
+        body: JSON.stringify({ notify_time: notifyTime, enabled, bath_time_type: bathTimeType }),
+      });
+      if (result.error) {
+        alert('設定の保存に失敗しました: ' + result.error);
+        return;
+      }
     }
+
+    // 見積もりメッセージを即時反映
+    updateClock();
+
+    alert('設定を保存しました');
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = originalText;
   }
-
-  // 見積もりメッセージを即時反映
-  updateClock();
-
-  alert('設定を保存しました');
 }
 
 // --- 記録画面 ---
@@ -483,6 +563,10 @@ async function saveSettings() {
 async function loadStats() {
   const summaryEl = document.getElementById('stats-summary');
   const listEl = document.getElementById('stats-days');
+
+  // ローディング表示
+  summaryEl.textContent = '';
+  listEl.innerHTML = '<div class="stats-loading"><span class="btn-spinner stats-spinner"></span></div>';
 
   let data;
   try {
@@ -760,14 +844,29 @@ function onboardingNext() {
 }
 
 async function onboardingPermission() {
-  const success = await subscribePush();
-  if (success) {
-    document.getElementById('perm-btn').style.display = 'none';
+  const btn = event.target;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spinner"></span>';
+
+  try {
+    const success = await subscribePush();
+    if (success) {
+      document.getElementById('perm-btn').style.display = 'none';
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
   onboardingNext();
 }
 
 async function onboardingComplete() {
+  const btn = event.target;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spinner"></span>';
+
   // 設定を保存
   const notifyTime = document.getElementById('ob-notify-time').value;
   const bathDuration = document.getElementById('ob-bath-duration').value;
@@ -776,12 +875,17 @@ async function onboardingComplete() {
   localStorage.setItem('bath_duration', bathDuration);
   localStorage.setItem('onboarding_done', '1');
 
-  // サーバーに通知時刻を保存
-  if (session) {
-    await apiFetch('/api/settings/update', {
-      method: 'POST',
-      body: JSON.stringify({ notify_time: notifyTime, enabled: true }),
-    });
+  try {
+    // サーバーに通知時刻を保存
+    if (session) {
+      await apiFetch('/api/settings/update', {
+        method: 'POST',
+        body: JSON.stringify({ notify_time: notifyTime, enabled: true }),
+      });
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
 
   // オーバーレイを閉じる

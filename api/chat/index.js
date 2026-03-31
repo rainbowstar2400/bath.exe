@@ -28,13 +28,18 @@ module.exports = async function handler(req, res) {
       return res.status(401).json({ error: '認証が必要です' });
     }
 
-    const session = await getOrCreateSession(user.id);
-    const messages = session.messages || [];
-    const userMessageCount = messages.filter(m => m.role === 'user').length;
-    const remaining = Math.max(0, MAX_TURNS - userMessageCount);
-    const limited = userMessageCount >= MAX_TURNS;
+    try {
+      const session = await getOrCreateSession(user.id);
+      const messages = session.messages || [];
+      const userMessageCount = messages.filter(m => m.role === 'user').length;
+      const remaining = Math.max(0, MAX_TURNS - userMessageCount);
+      const limited = userMessageCount >= MAX_TURNS;
 
-    return res.status(200).json({ messages, remaining, limited });
+      return res.status(200).json({ messages, remaining, limited });
+    } catch (err) {
+      console.error('チャット履歴取得エラー:', err.message);
+      return res.status(500).json({ error: 'チャット履歴の取得に失敗しました' });
+    }
   }
 
   if (req.method !== 'POST') {

@@ -36,6 +36,47 @@
   to { transform: rotate(360deg); }
 }
 
+/* チャット ローディング吹き出し（ドットタイピング） */
+.message.loading {
+  display: flex;
+  align-items: center;
+  min-height: 2em;
+}
+
+.dot-typing {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.dot-typing::before,
+.dot-typing::after,
+.dot-typing {
+  content: '';
+}
+
+.dot-typing,
+.dot-typing::before,
+.dot-typing::after {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted, #999);
+  animation: dot-bounce 1.2s infinite ease-in-out;
+}
+
+.dot-typing::before {
+  animation-delay: -0.32s;
+}
+
+.dot-typing::after {
+  animation-delay: -0.16s;
+}
+
+@keyframes dot-bounce {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
 :root {
   --peach: #ffb4a2;
   --coral: #e5989b;
@@ -570,6 +611,23 @@ header h1 {
   box-shadow: var(--shadow-lg);
 }
 
+.btn-save:disabled {
+  opacity: 0.7;
+  transform: none;
+}
+
+/* ボタン内スピナー */
+.btn-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
 /* =================================
    記録画面
    ================================= */
@@ -577,6 +635,19 @@ header h1 {
   flex: 1;
   padding: 16px 0;
   overflow-y: auto;
+}
+
+.stats-loading {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+.stats-spinner {
+  width: 24px;
+  height: 24px;
+  border-color: var(--border, rgba(0,0,0,0.05));
+  border-top-color: var(--tile-blue, #89c2d9);
 }
 
 .stats-summary {
@@ -867,6 +938,11 @@ header h1 {
 
 .onboarding-btn:hover {
   transform: translateY(-2px);
+}
+
+.onboarding-btn:disabled {
+  opacity: 0.7;
+  transform: none;
 }
 
 .onboarding-link {
